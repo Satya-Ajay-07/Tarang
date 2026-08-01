@@ -90,6 +90,12 @@ async def tarang_exception_handler(request: Request, exc: TarangException):
             }
         }
     )
+@app.get("/cors-test")
+def cors_test():
+    return {
+        "origins": settings.allowed_origins_list,
+        "raw": settings.ALLOWED_ORIGINS,
+    }
 
 @app.exception_handler(Exception)
 async def general_exception_handler(request: Request, exc: Exception):

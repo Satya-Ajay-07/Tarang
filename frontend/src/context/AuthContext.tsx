@@ -27,9 +27,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     async function checkAuthSession() {
       try {
-        const response = await fetch('http://localhost:8000/api/v1/auth/refresh', {
+        const response = await apiRequest('/auth/refresh', {
           method: 'POST',
           credentials: 'include',
+          skipAuth: true
         });
 
         if (response.ok) {
