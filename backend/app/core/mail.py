@@ -2,11 +2,6 @@ import resend
 from datetime import datetime
 from app.core.config import settings
 
-@app.get("/env-check")
-def env_check():
-    return {
-        "env": settings.ENV
-    }
 def send_verification_email(email: str, username: str, token: str):
     verification_url = (
     f"{settings.FRONTEND_URL}/verify-email?token={token}"

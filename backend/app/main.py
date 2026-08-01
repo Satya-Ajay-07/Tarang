@@ -29,6 +29,11 @@ app = FastAPI(
     redoc_url="/redoc" if settings.ENV != "production" else None,
 )
 
+@app.get("/env-check")
+def env_check():
+    return {
+        "env": settings.ENV
+    }
 # CORS — origins are loaded from the ALLOWED_ORIGINS environment variable.
 # Set ALLOWED_ORIGINS=http://localhost:3000 for local dev.
 # Set ALLOWED_ORIGINS=https://tarang.app for production.
