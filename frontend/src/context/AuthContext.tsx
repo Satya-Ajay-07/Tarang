@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { User } from '../types';
-import { apiRequest, setAccessToken } from '../services/api';
+import { apiRequest, setAccessToken,getAccessToken } from '../services/api';
 import { useRouter } from 'next/navigation';
 
 interface AuthContextType {
@@ -24,36 +24,40 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const router = useRouter();
 
   // On startup, attempt to refresh token to see if user session is active
-  useEffect(() => {
-    async function checkAuthSession() {
-      try {
-        const response = await apiRequest('/auth/refresh', {
-          method: 'POST',
-          credentials: 'include',
-          skipAuth: true
-        });
-
-        if (response.ok) {
-          const data = await response.json();
-          setAccessToken(data.access_token);
-          
-          // Retrieve current user profile
-          // Since we'll need a me/profile api, let's call a users/me endpoint (which we'll make in users endpoint)
-          const userRes = await apiRequest('/users/me');
-          if (userRes.ok) {
-            const userData = await userRes.json();
-            setUser(userData);
-          }
-        }
-      } catch (err) {
-        console.error("No active session found on startup", err);
-      } finally {
-        setLoading(false);
-      }
+ useEffect(() => {
+  async function checkAuthSession() {
+    // If we already have an access token,
+    // don't try to refresh immediately.
+    if (getAccessToken()) {
+      setLoading(false);
+      return;
     }
-    checkAuthSession();
-  }, []);
 
+    try {
+      const response = await apiRequest('/auth/refresh', {
+        method: 'POST',
+        skipAuth: true,
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setAccessToken(data.access_token);
+
+        const userRes = await apiRequest('/users/me');
+        if (userRes.ok) {
+          const userData = await userRes.json();
+          setUser(userData);
+        }
+      }
+    } catch (err) {
+      console.error("No active session found", err);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  checkAuthSession();
+  }, []);
   const login = async (usernameOrEmail: string, password: string, rememberMe = false) => {
     setLoading(true);
     try {

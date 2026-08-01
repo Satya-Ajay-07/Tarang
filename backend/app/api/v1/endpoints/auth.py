@@ -103,56 +103,126 @@ def login(response: Response, user_in: UserLogin, request: Request, db: Session 
     return Token(access_token=access_token, refresh_token=refresh_token)
 
 @router.post("/refresh", response_model=Token)
-def refresh_token(response: Response, request: Request, refresh_token: Optional[str] = Cookie(None), redis_client: redis.Redis = Depends(get_redis), db: Session = Depends(get_db)):
-    # Fallback to reading from authorization header if cookie is missing (convenient for API testing client)
+def refresh_token(
+    response: Response,
+    request: Request,
+    refresh_token: Optional[str] = Cookie(None),
+    redis_client: redis.Redis = Depends(get_redis),
+    db: Session = Depends(get_db),
+):
+    # ----------------------------
+    # Debug (remove after fixing)
+    # ----------------------------
+    print("Cookies received:", request.cookies)
+    print("Refresh token:", refresh_token)
+
+    # Allow Authorization header for API testing (Postman etc.)
     if not refresh_token:
         auth_header = request.headers.get("Authorization")
         if auth_header and auth_header.startswith("Bearer "):
             refresh_token = auth_header.split(" ")[1]
 
     if not refresh_token:
-        raise UnauthorizedException(detail="Refresh token missing", code="REFRESH_TOKEN_MISSING")
+        raise UnauthorizedException(
+            detail="Refresh token missing",
+            code="REFRESH_TOKEN_MISSING",
+        )
 
+    # ----------------------------
+    # Decode Refresh JWT
+    # ----------------------------
     payload = security.decode_token(refresh_token)
-    if not payload or payload.get("type") != "refresh":
-        raise UnauthorizedException(detail="Invalid or expired refresh token", code="REFRESH_TOKEN_INVALID")
+
+    if not payload:
+        raise UnauthorizedException(
+            detail="Invalid or expired refresh token",
+            code="REFRESH_TOKEN_INVALID",
+        )
+
+    if payload.get("type") != "refresh":
+        raise UnauthorizedException(
+            detail="Invalid refresh token type",
+            code="REFRESH_TOKEN_INVALID",
+        )
 
     user_id = payload.get("sub")
+
     if not user_id:
-        raise UnauthorizedException(detail="Invalid refresh token payload", code="REFRESH_TOKEN_INVALID")
+        raise UnauthorizedException(
+            detail="Invalid refresh token payload",
+            code="REFRESH_TOKEN_INVALID",
+        )
 
-    # Check validity in Redis (variable renamed to avoid shadowing FastAPI's 'status' import)
-    token_status = redis_client.get(f"refresh_token:{user_id}:{refresh_token}")
+    # ----------------------------
+    # Check Redis session
+    # ----------------------------
+    token_status = redis_client.get(
+        f"refresh_token:{user_id}:{refresh_token}"
+    )
+
     if not token_status:
-        raise UnauthorizedException(detail="Revoked or expired refresh token session", code="REFRESH_TOKEN_REVOKED")
+        raise UnauthorizedException(
+            detail="Refresh token expired or revoked",
+            code="REFRESH_TOKEN_REVOKED",
+        )
 
-    # Fetch User
+    # ----------------------------
+    # Fetch user
+    # ----------------------------
     user = db.query(User).filter(User.id == user_id).first()
-    if not user or not user.is_active:
-        raise UnauthorizedException(detail="User inactive or not found", code="USER_INACTIVE")
 
-    # Revoke old refresh token from Redis
-    redis_client.delete(f"refresh_token:{user_id}:{refresh_token}")
+    if not user:
+        raise UnauthorizedException(
+            detail="User not found",
+            code="USER_NOT_FOUND",
+        )
 
-    # Generate new pair
-    new_access_token = security.create_access_token(subject=user.id)
-    new_refresh_token = security.create_refresh_token(subject=user.id)
+    if not user.is_active:
+        raise UnauthorizedException(
+            detail="User inactive",
+            code="USER_INACTIVE",
+        )
 
-    # Save new refresh token in Redis
-    redis_client.setex(f"refresh_token:{user.id}:{new_refresh_token}", 7 * 86400, "active")
+    # ----------------------------
+    # Revoke old refresh token
+    # ----------------------------
+    redis_client.delete(
+        f"refresh_token:{user_id}:{refresh_token}"
+    )
 
-    # Set new HTTP-only Cookie
+    # ----------------------------
+    # Generate new tokens
+    # ----------------------------
+    new_access_token = security.create_access_token(user.id)
+    new_refresh_token = security.create_refresh_token(user.id)
+
+    # ----------------------------
+    # Store new refresh token
+    # ----------------------------
+    redis_client.setex(
+        f"refresh_token:{user.id}:{new_refresh_token}",
+        7 * 24 * 60 * 60,
+        "active",
+    )
+
+    # ----------------------------
+    # Set cookie
+    # ----------------------------
     response.set_cookie(
         key="refresh_token",
         value=new_refresh_token,
         httponly=True,
-        max_age=7 * 86400,
-        expires=7 * 86400,
+        secure=settings.ENV == "production",
         samesite="none",
-        secure=True if settings.ENV == "production" else False
+        max_age=7 * 24 * 60 * 60,
+        expires=7 * 24 * 60 * 60,
+        path="/",
     )
 
-    return Token(access_token=new_access_token, refresh_token=new_refresh_token)
+    return Token(
+        access_token=new_access_token,
+        refresh_token=new_refresh_token,
+    )
 
 @router.post("/logout")
 def logout(response: Response, request: Request, refresh_token: Optional[str] = Cookie(None), redis_client: redis.Redis = Depends(get_redis)):
