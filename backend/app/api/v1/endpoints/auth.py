@@ -96,7 +96,7 @@ def login(response: Response, user_in: UserLogin, request: Request, db: Session 
         httponly=True,
         max_age=7 * 86400,
         expires=7 * 86400,
-        samesite="lax",
+        samesite="none",
         secure=True if settings.ENV == "production" else False
     )
 
@@ -148,7 +148,7 @@ def refresh_token(response: Response, request: Request, refresh_token: Optional[
         httponly=True,
         max_age=7 * 86400,
         expires=7 * 86400,
-        samesite="lax",
+        samesite="none",
         secure=True if settings.ENV == "production" else False
     )
 
