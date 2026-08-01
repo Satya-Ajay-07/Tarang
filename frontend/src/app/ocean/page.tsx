@@ -1,0 +1,148 @@
+'use client';
+
+import React, { useState, useEffect } from 'react';
+import MainAppLayout from '@/layouts/MainAppLayout';
+import { CreateWave } from '@/features/waves/components/CreateWave';
+import { WaveCard } from '@/features/waves/components/WaveCard';
+import { apiRequest } from '@/services/api';
+
+export default function OceanPage() {
+  const [waves, setWaves] = useState<any[]>([]);
+  const [streamType, setStreamType] = useState<'all' | 'riding'>('all');
+  const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [skip, setSkip] = useState(0);
+  const [hasMore, setHasMore] = useState(true);
+  const LIMIT = 10;
+
+  const fetchWaves = async (reset = false) => {
+    if (reset) {
+      setLoading(true);
+      setSkip(0);
+    } else {
+      setLoadingMore(true);
+    }
+    
+    const currentSkip = reset ? 0 : skip;
+
+    try {
+      const res = await apiRequest(`/waves?stream_type=${streamType}&skip=${currentSkip}&limit=${LIMIT}`);
+      if (res.ok) {
+        const data = await res.json();
+        if (reset) {
+          setWaves(data);
+        } else {
+          setWaves((prev) => [...prev, ...data]);
+        }
+        
+        // If we fetched fewer waves than the limit, we hit the end of the stream
+        if (data.length < LIMIT) {
+          setHasMore(false);
+        } else {
+          setHasMore(true);
+          setSkip(currentSkip + LIMIT);
+        }
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+      setLoadingMore(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchWaves(true);
+  }, [streamType]);
+
+  const handleRefresh = () => {
+    fetchWaves(true);
+  };
+
+  return (
+    <MainAppLayout>
+      <div className="flex flex-col h-full bg-transparent">
+        {/* Sticky Header */}
+        <header className="sticky top-0 z-20 flex flex-col border-b border-slate-200/50 bg-white/70 backdrop-blur-md dark:border-slate-850 dark:bg-slate-900/70 p-4">
+          <div className="flex items-center justify-between">
+            <h1 className="text-xl font-black tracking-tight bg-gradient-to-r from-ocean to-aqua bg-clip-text text-transparent">
+              Ocean
+            </h1>
+          </div>
+
+          {/* Ocean Stream Selection Tabs */}
+          <div className="flex gap-4 mt-4 border-t border-slate-100/40 pt-2 text-xs font-bold uppercase tracking-wider text-slate-500">
+            <button
+              onClick={() => setStreamType('all')}
+              className={`pb-2 border-b-2 transition-all ${
+                streamType === 'all' ? 'border-aqua text-aqua' : 'border-transparent hover:text-slate-700 dark:hover:text-slate-200'
+              }`}
+            >
+              Wave Stream
+            </button>
+            <button
+              onClick={() => setStreamType('riding')}
+              className={`pb-2 border-b-2 transition-all ${
+                streamType === 'riding' ? 'border-aqua text-aqua' : 'border-transparent hover:text-slate-700 dark:hover:text-slate-200'
+              }`}
+            >
+              Riding Currents
+            </button>
+          </div>
+        </header>
+
+        {/* Content stream area */}
+        <div className="flex-1 p-4 md:p-6 space-y-6 pb-20 md:pb-6">
+          <CreateWave onWaveCreated={handleRefresh} />
+
+          {/* Listing */}
+          {loading ? (
+            <div className="space-y-4">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="rounded-3xl border border-slate-100 bg-white/50 p-5 dark:border-slate-850 dark:bg-slate-900/30 animate-pulse space-y-4">
+                  <div className="flex items-center gap-3">
+                    <div className="h-10 w-10 rounded-full bg-slate-200 dark:bg-slate-800" />
+                    <div className="space-y-2">
+                      <div className="h-3 w-28 bg-slate-200 dark:bg-slate-800 rounded" />
+                      <div className="h-2.5 w-16 bg-slate-200 dark:bg-slate-800 rounded" />
+                    </div>
+                  </div>
+                  <div className="space-y-2 pl-13">
+                    <div className="h-3.5 w-full bg-slate-200 dark:bg-slate-800 rounded" />
+                    <div className="h-3.5 w-5/6 bg-slate-200 dark:bg-slate-800 rounded" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : waves.length === 0 ? (
+            <div className="text-center py-16 space-y-3">
+              <div className="text-4xl">🌊</div>
+              <h3 className="text-sm font-bold text-slate-500">The Stream is Calm</h3>
+              <p className="text-xs text-slate-400 max-w-xs mx-auto">
+                No waves have been released on this current. Create a wave or start riding with other creators.
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {waves.map((wave) => (
+                <WaveCard key={wave.id} wave={wave} onRefresh={handleRefresh} />
+              ))}
+              
+              {hasMore && (
+                <div className="text-center pt-4">
+                  <button
+                    onClick={() => fetchWaves(false)}
+                    disabled={loadingMore}
+                    className="rounded-full border border-slate-200 bg-white/50 px-6 py-2.5 text-xs font-bold hover:bg-slate-100 transition-all dark:border-slate-850 dark:bg-slate-900/50 disabled:opacity-50"
+                  >
+                    {loadingMore ? 'Riding next wave...' : 'Load More Waves'}
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+    </MainAppLayout>
+  );
+}

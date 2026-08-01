@@ -1,0 +1,30 @@
+# Build output
+.next/
+out/
+
+# Dependencies (installed fresh in Docker)
+node_modules/
+
+# Environment / secrets
+.env
+.env.*
+!.env.example
+
+# Dev tooling
+.eslintcache
+.vscode/
+.idea/
+*.swp
+.DS_Store
+
+# Test artifacts
+coverage/
+
+# Git
+.git/
+.gitignore
+
+# Docker itself
+Dockerfile
+.dockerignore
+docker-compose*.yml

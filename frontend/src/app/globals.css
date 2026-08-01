@@ -1,0 +1,79 @@
+@import "tailwindcss";
+
+@theme inline {
+  --color-ocean: var(--ocean);
+  --color-aqua: var(--aqua);
+  --color-foam: var(--foam);
+  --color-tarang-bg-light: #F8FAFC;
+  --color-tarang-bg-dark: #08131E;
+  
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card-bg: var(--card-bg);
+  --color-card-border: var(--card-border);
+  --color-text-primary: var(--text-primary);
+  --color-text-secondary: var(--text-secondary);
+  --color-text-muted: var(--text-muted);
+}
+
+:root {
+  --background: #F8FAFC;
+  --foreground: #0F172A;
+  --ocean: #0B4F8C;
+  --aqua: #0D9488;
+  --foam: #2DD4BF;
+  --card-bg: #FFFFFF;
+  --card-border: #E2E8F0;
+  --text-primary: #0F172A;
+  --text-secondary: #475569;
+  --text-muted: #64748B;
+}
+
+html:not(.dark) {
+  --background: #F8FAFC;
+  --foreground: #0F172A;
+  --card-bg: #FFFFFF;
+  --card-border: #E2E8F0;
+  --text-primary: #0F172A;
+  --text-secondary: #475569;
+  --text-muted: #64748B;
+  --ocean: #0B4F8C;
+  --aqua: #0D9488;
+}
+
+.dark {
+  --background: #08131E;
+  --foreground: #F8FBFD;
+  --ocean: #0F4C81;
+  --aqua: #14B8A6;
+  --foam: #6EE7E7;
+  --card-bg: #0F1E2E;
+  --card-border: #1E2E3F;
+  --text-primary: #F8FBFD;
+  --text-secondary: #A0AEC0;
+  --text-muted: #64748B;
+}
+
+body {
+  background-color: var(--background);
+  color: var(--text-primary);
+  font-family: 'Outfit', 'Inter', system-ui, -apple-system, sans-serif;
+  transition: background-color 0.2s ease, color 0.2s ease;
+  min-height: 100vh;
+}
+
+/* Custom premium scrollbars inspired by waves */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--aqua);
+  border-radius: 999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--ocean);
+}
