@@ -3,7 +3,9 @@ from datetime import datetime
 from app.core.config import settings
 
 def send_verification_email(email: str, username: str, token: str):
-    verification_url = f"http://localhost:3000/verify-email?token={token}"
+    verification_url = (
+    f"{settings.FRONTEND_URL}/verify-email?token={token}"
+    )
     
     html_content = f"""
     <!DOCTYPE html>

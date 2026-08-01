@@ -9,6 +9,7 @@ class Settings(BaseSettings):
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 15
     REFRESH_TOKEN_EXPIRE_DAYS: int = 7
+    FRONTEND_URL: str = "http://localhost:3000"
 
     # Comma-separated list of allowed CORS origins.
     # Example in .env:  ALLOWED_ORIGINS=http://localhost:3000,https://tarang.app
