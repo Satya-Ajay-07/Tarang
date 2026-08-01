@@ -7,8 +7,24 @@ let refreshToken: string | null =
         ? localStorage.getItem("refresh_token")
         : null;
 
-export const setRefreshToken = (token: string | null) => {
+export const setRefreshToken = (
+    token: string | null
+) => {
+
     refreshToken = token;
+
+    if (typeof window === "undefined")
+        return;
+
+    if (token)
+        localStorage.setItem(
+            "refresh_token",
+            token
+        );
+    else
+        localStorage.removeItem(
+            "refresh_token"
+        );
 };
 
 export const getRefreshToken = () => refreshToken;  
@@ -74,14 +90,15 @@ async function attemptTokenRefresh() {
         return false;
 
     const res = await fetch(
-        `${API_URL}/auth/refresh`,
-        {
-            method: "POST",
-            headers: {
-                Authorization: `Bearer ${refreshToken}`,
-                "Content-Type":"application/json"
-            }
+    `${API_URL}/auth/refresh`,
+    {
+        method:"POST",
+        credentials:"include",
+        headers:{
+            Authorization:`Bearer ${refreshToken}`,
+            "Content-Type":"application/json"
         }
+      }
     );
 
     if (!res.ok)

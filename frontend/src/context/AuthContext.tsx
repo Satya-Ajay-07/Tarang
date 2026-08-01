@@ -2,8 +2,9 @@
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { User } from '../types';
-import { apiRequest, setAccessToken,getAccessToken } from '../services/api';
+import { apiRequest, setAccessToken,getAccessToken,setRefreshToken} from '../services/api';
 import { useRouter } from 'next/navigation';
+
 
 interface AuthContextType {
   user: User | null;
@@ -39,18 +40,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         skipAuth: true,
       });
 
-      if (response.ok) {
-        const data = await response.json();
-        setAccessToken(data.access_token);
-        // Save refresh token
-        localStorage.setItem("refresh_token", data.refresh_token);
+     if (response.ok) {
+    const data = await response.json();
 
-        const userRes = await apiRequest('/users/me');
-        if (userRes.ok) {
-          const userData = await userRes.json();
-          setUser(userData);
-        }
-      }
+    setAccessToken(data.access_token);
+    setRefreshToken(data.refresh_token);
+
+    const userRes = await apiRequest("/users/me");
+
+    if (!userRes.ok)
+        throw new Error("Failed to fetch user");
+
+    const userData = await userRes.json();
+
+    setUser(userData);
+}
     } catch (err) {
       console.error("No active session found", err);
     } finally {
@@ -75,11 +79,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
 
       const data = await res.json();
+
       setAccessToken(data.access_token);
+      setRefreshToken(data.refresh_token);   // <-- ADD THIS
 
       const userRes = await apiRequest('/users/me');
-      if (!userRes.ok) throw new Error("Failed to fetch user profile");
+
+      if (!userRes.ok)
+        throw new Error("Failed to fetch user profile");
+
       const userData = await userRes.json();
+
+      setUser(userData);
+
+      router.push('/ocean');
+      if (!userRes.ok) throw new Error("Failed to fetch user profile");
       
       setUser(userData);
       router.push('/ocean');
@@ -123,6 +137,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } finally {
       setUser(null);
       setAccessToken(null);
+      setRefreshToken(null);
+
+      localStorage.removeItem(
+        "refresh_token"
+      );
       setLoading(false);
       router.push('/login');
     }
