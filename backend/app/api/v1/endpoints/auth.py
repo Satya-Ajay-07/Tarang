@@ -97,6 +97,7 @@ def login(response: Response, user_in: UserLogin, request: Request, db: Session 
         max_age=7 * 86400,
         expires=7 * 86400,
         samesite="none",
+        domain="tarang-production.up.railway.app",
         secure=True if settings.ENV == "production" else False
     )
 
@@ -217,6 +218,7 @@ def refresh_token(
         max_age=7 * 24 * 60 * 60,
         expires=7 * 24 * 60 * 60,
         path="/",
+        domain="tarang-production.up.railway.app",
     )
 
     return Token(
