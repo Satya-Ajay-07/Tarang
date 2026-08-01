@@ -10,6 +10,7 @@ from app.core import security
 from app.core.exceptions import BadRequestException, UnauthorizedException, NotFoundException
 from app.models.models import User
 from app.schemas.schemas import UserCreate, UserLogin, UserResponse, Token
+from fastapi.responses import JSONResponse, RedirectResponse
 import redis
 
 router = APIRouter()
@@ -63,44 +64,62 @@ def register(user_in: UserCreate, request: Request, db: Session = Depends(get_db
 
     return db_user
 
-@router.post("/login", response_model=Token)
-def login(response: Response, user_in: UserLogin, request: Request, db: Session = Depends(get_db), redis_client: redis.Redis = Depends(get_redis)):
+@router.post("/login")
+def login(
+    user_in: UserLogin,
+    request: Request,
+    db: Session =Depends(get_db),
+    redis_client: redis.Redis = Depends(get_redis)
+):
+
     client_ip = request.client.host if request.client else "unknown"
     rate_limit_auth(request, client_ip, redis_client, limit=10, window_seconds=60)
 
     user = db.query(User).filter(
-        (User.username == user_in.username_or_email) | (User.email == user_in.username_or_email)
+        (User.username == user_in.username_or_email) |
+        (User.email == user_in.username_or_email)
     ).first()
-    
-    if not user or not security.verify_password(user_in.password, user.hashed_password):
-        raise UnauthorizedException(detail="Invalid username/email or password", code="LOGIN_FAILED")
 
-    # Block login for users who have not verified their email yet
+    if not user or not security.verify_password(user_in.password, user.hashed_password):
+        raise UnauthorizedException(
+            detail="Invalid username/email or password",
+            code="LOGIN_FAILED"
+        )
+
     if not user.is_active:
         raise UnauthorizedException(
-            detail="Please verify your email before logging in. Check your inbox for a verification link.",
+            detail="Please verify your email first.",
             code="EMAIL_NOT_VERIFIED"
         )
 
-    # Generate tokens
-    access_token = security.create_access_token(subject=user.id)
-    refresh_token = security.create_refresh_token(subject=user.id)
+    access_token = security.create_access_token(user.id)
+    refresh_token = security.create_refresh_token(user.id)
 
-    # Save refresh token in Redis to allow validation / revocation
-    redis_client.setex(f"refresh_token:{user.id}:{refresh_token}", 7 * 86400, "active")
+    redis_client.setex(
+        f"refresh_token:{user.id}:{refresh_token}",
+        7 * 24 * 60 * 60,
+        "active"
+    )
 
-    # Set HTTP-only Cookie for refresh token
+    response = JSONResponse(
+        content={
+            "access_token": access_token,
+            "refresh_token": refresh_token,
+            "token_type": "bearer"
+        }
+    )
+
     response.set_cookie(
-    key="refresh_token",
-    value=refresh_token,
-    httponly=True,
-    secure=True,
-    samesite="none",
-    path="/",
-    max_age=7 * 24 * 60 * 60,
-)
+        key="refresh_token",
+        value=refresh_token,
+        httponly=True,
+        secure=True,
+        samesite="none",
+        path="/",
+        max_age=7 * 24 * 60 * 60,
+    )
 
-    return Token(access_token=access_token, refresh_token=refresh_token)
+    return response
 
 @router.post("/refresh", response_model=Token)
 def refresh_token(
@@ -209,7 +228,7 @@ def refresh_token(
     # Set cookie
     # ----------------------------
     response.set_cookie(
-    key="refresh_token",
+    key="new_refresh_token",
     value=refresh_token,
     httponly=True,
     secure=True,
@@ -218,10 +237,25 @@ def refresh_token(
     max_age=7 * 24 * 60 * 60,
     )
 
-    return Token(
-        access_token=new_access_token,
-        refresh_token=new_refresh_token,
+    response = JSONResponse(
+    content={
+        "access_token": new_access_token,
+        "refresh_token": new_refresh_token,
+        "token_type": "bearer"
+    }
     )
+
+    response.set_cookie(
+    key="refresh_token",
+    value=new_refresh_token,
+    httponly=True,
+    secure=True,
+    samesite="none",
+    path="/",
+    max_age=7 * 24 * 60 * 60,
+    )
+
+    return response
 
 @router.post("/logout")
 def logout(response: Response, request: Request, refresh_token: Optional[str] = Cookie(None), redis_client: redis.Redis = Depends(get_redis)):
@@ -232,7 +266,12 @@ def logout(response: Response, request: Request, refresh_token: Optional[str] = 
             if user_id:
                 redis_client.delete(f"refresh_token:{user_id}:{refresh_token}")
                 
-    response.delete_cookie("refresh_token")
+    response.delete_cookie(
+    key="refresh_token",
+    path="/",
+    secure=True,
+    samesite="none",
+    )
     return {"success": True, "message": "Successfully logged out"}
 
 @router.post("/forgot-password")
