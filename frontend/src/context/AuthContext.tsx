@@ -42,6 +42,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (response.ok) {
         const data = await response.json();
         setAccessToken(data.access_token);
+        // Save refresh token
+        localStorage.setItem("refresh_token", data.refresh_token);
 
         const userRes = await apiRequest('/users/me');
         if (userRes.ok) {

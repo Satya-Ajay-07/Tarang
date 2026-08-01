@@ -2,7 +2,16 @@ const API_URL =
   process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
 
 let accessToken: string | null = null;
+let refreshToken: string | null =
+    typeof window !== "undefined"
+        ? localStorage.getItem("refresh_token")
+        : null;
 
+export const setRefreshToken = (token: string | null) => {
+    refreshToken = token;
+};
+
+export const getRefreshToken = () => refreshToken;  
 export const setAccessToken = (token: string | null) => {
   accessToken = token;
 };
@@ -60,36 +69,28 @@ export async function apiRequest(
   return response;
 }
 
-async function attemptTokenRefresh(): Promise<boolean> {
-  try {
-    console.log("Refreshing access token...");
+async function attemptTokenRefresh() {
+    if (!refreshToken)
+        return false;
 
-    const res = await fetch(`${API_URL}/auth/refresh`, {
-      method: "POST",
-      credentials: "include",
-      headers: {
-        "Content-Type": "application/json",
-      },
-    });
+    const res = await fetch(
+        `${API_URL}/auth/refresh`,
+        {
+            method: "POST",
+            headers: {
+                Authorization: `Bearer ${refreshToken}`,
+                "Content-Type":"application/json"
+            }
+        }
+    );
 
-    if (!res.ok) {
-      console.warn("Refresh failed:", res.status);
-
-      // Session expired
-      setAccessToken(null);
-      return false;
-    }
+    if (!res.ok)
+        return false;
 
     const data = await res.json();
 
-    console.log("Refresh successful");
-
     setAccessToken(data.access_token);
+    setRefreshToken(data.refresh_token);
 
     return true;
-  } catch (err) {
-    console.error("Refresh error:", err);
-    setAccessToken(null);
-    return false;
-  }
 }
