@@ -39,10 +39,14 @@ def env_check():
 # Set ALLOWED_ORIGINS=https://tarang.app for production.
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.allowed_origins_list,
+    allow_origins=[
+        "http://localhost:3000",
+        "https://tarang-satya-ajay-07s-projects.vercel.app",
+    ],
+    allow_origin_regex=r"https://tarang-.*-satya-ajay-07s-projects\.vercel\.app",
     allow_credentials=True,
-    allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-    allow_headers=["Authorization", "Content-Type", "X-Request-ID"],
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 
