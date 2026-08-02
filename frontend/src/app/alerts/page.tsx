@@ -79,7 +79,9 @@ export default function AlertsPage() {
                       {alert.content}
                     </p>
                     <span className="text-[10px] text-slate-400 block font-medium">
-                      {formatDistanceToNow(new Date(alert.created_at + "Z"), { addSuffix: true })}
+                      {formatDistanceToNow(new Date(alert.created_at), {
+                        addSuffix: true,
+                      })}
                     </span>
                   </div>
                 </div>
