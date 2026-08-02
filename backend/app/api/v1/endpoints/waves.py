@@ -233,6 +233,60 @@ def get_rising_waves(
 
     return [enrich_wave(w, db, current_user) for w in sorted_waves][:limit]
 
+@router.get("/bookmarks", response_model=List[WaveResponse])
+def get_bookmarks(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
+):
+    bookmarks = db.query(Bookmark).filter(Bookmark.user_id == current_user.id).order_by(Bookmark.created_at.desc()).all()
+    wave_ids = [b.wave_id for b in bookmarks]
+    waves = db.query(Wave).filter(Wave.id.in_(wave_ids)).all()
+    # Preserve order
+    wave_map = {w.id: w for w in waves}
+    ordered_waves = [wave_map[wid] for wid in wave_ids if wid in wave_map]
+    return [enrich_wave(w, db, current_user) for w in ordered_waves]
+
+# Add a bookmark
+@router.post("/{wave_id}/bookmark")
+def add_bookmark(
+    wave_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
+):
+    wave = db.query(Wave).filter(Wave.id == wave_id).first()
+    if not wave:
+        raise NotFoundException(detail="Wave not found")
+        
+    existing_bookmark = db.query(Bookmark).filter(
+        Bookmark.user_id == current_user.id,
+        Bookmark.wave_id == wave_id
+    ).first()
+    if existing_bookmark:
+        return {"message": "Wave already bookmarked", "bookmarked": True}
+        
+    new_bookmark = Bookmark(user_id=current_user.id, wave_id=wave_id)
+    db.add(new_bookmark)
+    db.commit()
+    return {"message": "Wave bookmarked successfully", "bookmarked": True}
+
+# Delete a bookmark
+@router.delete("/{wave_id}/bookmark")
+def delete_bookmark(
+    wave_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
+):
+    bookmark = db.query(Bookmark).filter(
+        Bookmark.user_id == current_user.id,
+        Bookmark.wave_id == wave_id
+    ).first()
+    if not bookmark:
+        raise NotFoundException(detail="Bookmark not found")
+        
+    db.delete(bookmark)
+    db.commit()
+    return {"message": "Bookmark removed successfully", "bookmarked": False}
+
 # Get single wave details
 @router.get("/{wave_id}", response_model=WaveResponse)
 def get_wave(
