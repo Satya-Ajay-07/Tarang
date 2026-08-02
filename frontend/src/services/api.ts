@@ -58,7 +58,7 @@ export async function apiRequest(
   console.log("Access Token:", accessToken ? "Present" : "NULL");
   console.log("Skip Auth:", options.skipAuth);
   console.log("==================================");
-
+  console.log("Sending Authorization:", headers.get("Authorization"));
   let response = await fetch(`${API_URL}${path}`, {
     ...options,
     headers,
@@ -86,6 +86,8 @@ export async function apiRequest(
 }
 
 async function attemptTokenRefresh() {
+  console.log("Refresh token:", refreshToken);
+  console.log("Stored refresh token:", localStorage.getItem("refresh_token"));
     if (!refreshToken)
         return false;
 
