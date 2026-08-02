@@ -30,6 +30,9 @@ class CloudinaryStorage(BaseStorage):
 
     def upload_file(self, file: UploadFile, folder: str = "tarang") -> str:
         # Check if setup correctly
+        print("Cloud Name:", settings.CLOUDINARY_CLOUD_NAME)
+        print("API Key:", settings.CLOUDINARY_API_KEY)
+        print("API Secret:", settings.CLOUDINARY_API_SECRET)
         if not settings.CLOUDINARY_CLOUD_NAME or settings.CLOUDINARY_CLOUD_NAME == "dev_cloudinary":
             # Return placeholder in local dev if not configured
             return f"https://res.cloudinary.com/demo/image/upload/v12345/sample.png"

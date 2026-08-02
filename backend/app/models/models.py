@@ -4,7 +4,7 @@ from sqlalchemy import Column, String, Boolean, DateTime, ForeignKey, Text, Tabl
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 from app.core.database import Base
-
+from datetime import datetime, timezone
 # Helper function to generate UUIDs
 def generate_uuid():
     return str(uuid.uuid4())
@@ -42,7 +42,11 @@ class Wave(Base):
     content = Column(Text, nullable=True)
     media_url = Column(String(512), nullable=True)
     media_type = Column(String(50), nullable=True)  # "image", "video"
-    created_at = Column(DateTime, default=datetime.utcnow, index=True)
+    created_at = Column(
+    DateTime(timezone=True),
+    default=lambda: datetime.now(timezone.utc),
+    index=True
+    )
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     # Spread Wave (Repost) support
@@ -150,7 +154,11 @@ class Message(Base):
     recipient_id = Column(String(36), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
     content = Column(Text, nullable=True)
     media_url = Column(String(512), nullable=True)
-    created_at = Column(DateTime, default=datetime.utcnow, index=True)
+    created_at = Column(
+    DateTime(timezone=True),
+    default=lambda: datetime.now(timezone.utc),
+    index=True
+    )
     is_read = Column(Boolean, default=False)
     read_at = Column(DateTime, nullable=True)
 
@@ -164,7 +172,11 @@ class WaveAlert(Base):
     type = Column(String(50), nullable=False)  # "ripple", "join", "spread", "follow"
     content = Column(Text, nullable=True)
     is_read = Column(Boolean, default=False)
-    created_at = Column(DateTime, default=datetime.utcnow, index=True)
+    created_at = Column(
+    DateTime(timezone=True),
+    default=lambda: datetime.now(timezone.utc),
+    index=True
+    )
 
     recipient = relationship("User", back_populates="alerts_received", foreign_keys=[recipient_id])
     sender = relationship("User", back_populates="alerts_sent", foreign_keys=[sender_id])

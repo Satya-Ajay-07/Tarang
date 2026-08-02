@@ -329,7 +329,7 @@ export default function DiscoverPage() {
                         <div className="flex gap-4 text-[10px] text-slate-400 font-semibold">
                           <span>💙 {w.ripples_count} Ripples</span>
                           <span>
-                            {formatDistanceToNow(new Date(w.created_at), { addSuffix: true })}
+                            {formatDistanceToNow(new Date(w.created_at + "Z"), { addSuffix: true })}
                           </span>
                         </div>
                       </div>

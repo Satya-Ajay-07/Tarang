@@ -174,7 +174,7 @@ function ChatWindow({
                     isMine ? 'text-white/60 text-right' : 'text-slate-400'
                   }`}
                 >
-                  {formatDistanceToNow(new Date(msg.created_at), { addSuffix: true })}
+                  {formatDistanceToNow(new Date(msg.created_at + "Z"), { addSuffix: true })}
                   {isMine && msg.is_read && ' · Read'}
                 </span>
               </div>

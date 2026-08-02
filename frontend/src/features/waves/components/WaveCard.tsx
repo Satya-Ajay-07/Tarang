@@ -214,7 +214,7 @@ export const WaveCard: React.FC<WaveCardProps> = ({ wave, onRefresh }) => {
                 <div className="flex items-center gap-2">
                   <span className="font-bold">@{join.creator.username}</span>
                   <span className="text-[9px] text-slate-400">
-                    {formatDistanceToNow(new Date(join.created_at), { addSuffix: true })}
+                    {formatDistanceToNow(new Date(join.created_at + "Z"), { addSuffix: true })}
                   </span>
                 </div>
                 <p className="text-slate-600 dark:text-slate-300">{join.content}</p>
