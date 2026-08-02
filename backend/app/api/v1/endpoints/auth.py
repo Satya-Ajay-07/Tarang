@@ -127,12 +127,18 @@ def refresh_token(
     redis_client: redis.Redis = Depends(get_redis),
     db: Session = Depends(get_db),
 ):
+    print("=" * 60)
+    print("REFRESH ENDPOINT CALLED")
+
     refresh_token = None
 
     auth = request.headers.get("Authorization")
+    print("Authorization Header:", auth)
 
     if auth and auth.startswith("Bearer "):
         refresh_token = auth.split(" ")[1]
+
+    print("Refresh Token:", refresh_token)
 
     if not refresh_token:
         raise UnauthorizedException(
@@ -141,6 +147,7 @@ def refresh_token(
         )
 
     payload = security.decode_token(refresh_token)
+    print("Decoded Payload:", payload)
 
     if not payload or payload.get("type") != "refresh":
         raise UnauthorizedException(
@@ -153,6 +160,8 @@ def refresh_token(
     token_status = redis_client.get(
         f"refresh_token:{user_id}:{refresh_token}"
     )
+
+    print("Redis Status:", token_status)
 
     if not token_status:
         raise UnauthorizedException(
@@ -175,11 +184,12 @@ def refresh_token(
         "active"
     )
 
+    print("Refresh Successful")
+
     return Token(
         access_token=new_access,
         refresh_token=new_refresh
     )
-
 @router.post("/logout")
 def logout(response: Response, request: Request, refresh_token: Optional[str] = Cookie(None), redis_client: redis.Redis = Depends(get_redis)):
     if refresh_token:
