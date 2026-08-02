@@ -86,27 +86,34 @@ export async function apiRequest(
 }
 
 async function attemptTokenRefresh() {
-  console.log("Refresh token:", refreshToken);
-  console.log("Stored refresh token:", localStorage.getItem("refresh_token"));
-    if (!refreshToken)
-        return false;
+    console.log("===== REFRESH DEBUG =====");
+    console.log("Memory refreshToken:", refreshToken);
+    console.log("Stored refresh token:", localStorage.getItem("refresh_token"));
 
-    const res = await fetch(
-    `${API_URL}/auth/refresh`,
-    {
-        method:"POST",
-        credentials:"include",
-        headers:{
-            Authorization:`Bearer ${refreshToken}`,
-            "Content-Type":"application/json"
+    if (!refreshToken) {
+        console.log("❌ No refresh token in memory");
+        return false;
+    }
+
+    console.log("✅ Sending Authorization:", `Bearer ${refreshToken}`);
+
+    const res = await fetch(`${API_URL}/auth/refresh`, {
+        method: "POST",
+        credentials: "include",
+        headers: {
+            Authorization: `Bearer ${refreshToken}`,
+            "Content-Type": "application/json",
         }
-      }
-    );
+    });
+
+    console.log("Refresh Response:", res.status);
 
     if (!res.ok)
         return false;
 
     const data = await res.json();
+
+    console.log("New Refresh Token:", data.refresh_token);
 
     setAccessToken(data.access_token);
     setRefreshToken(data.refresh_token);
