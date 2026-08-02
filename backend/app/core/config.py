@@ -19,6 +19,12 @@ class Settings(BaseSettings):
     CLOUDINARY_API_KEY: Optional[str] = None
     CLOUDINARY_API_SECRET: Optional[str] = None
 
+    SMTP_SERVER: str
+    SMTP_PORT: int
+    SMTP_EMAIL: str
+    SMTP_PASSWORD: str
+    FROM_EMAIL: str
+
     ENV: str = "development"
     PORT: int = 8000
     HOST: str = "127.0.0.1"

@@ -1,4 +1,6 @@
-import resend
+import smtplib
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
 from datetime import datetime
 from app.core.config import settings
 
@@ -110,23 +112,31 @@ def send_verification_email(email: str, username: str, token: str):
     </html>
     """
 
-    # Check if we should use Resend (requires configured key)
-    has_valid_key = settings.RESEND_API_KEY and settings.RESEND_API_KEY not in ("re_your_api_key", "", None)
-    
-    if has_valid_key:
-        try:
-            resend.api_key = settings.RESEND_API_KEY
-            r = resend.Emails.send({
-                "from": f"Tarang <{settings.MAIL_FROM}>",
-                "to": email,
-                "subject": "Verify your Tarang Account 🌊",
-                "html": html_content
-            })
-            print(f"[MAIL PRODUCTION] Verification email sent via Resend for {email}: {r}")
-        except Exception as e:
-            print(f"[MAIL ERROR] Failed sending via Resend: {str(e)}")
-            # Fallback output in logs so it does not block the user entirely if API fails
-            print(f"[MAIL MOCK FALLBACK] Verification link for {email}: {verification_url}")
-    else:
-        # Mock implementation for local/dev
-        print(f"[MAIL MOCK] Verification link for {email}: {verification_url}")
+    try:
+        msg = MIMEMultipart("alternative")
+
+        msg["Subject"] = "Verify your Tarang Account 🌊"
+        msg["From"] = settings.FROM_EMAIL
+        msg["To"] = email
+
+        msg.attach(MIMEText(html_content, "html"))
+
+        with smtplib.SMTP(
+            settings.SMTP_SERVER,
+            settings.SMTP_PORT
+        ) as server:
+
+            server.starttls()
+
+            server.login(
+                settings.SMTP_EMAIL,
+                settings.SMTP_PASSWORD
+            )
+
+            server.send_message(msg)
+
+        print(f"[MAIL] Verification email sent to {email}")
+
+    except Exception as e:
+        print(f"[MAIL ERROR] {e}")
+        print(f"[MAIL FALLBACK] {verification_url}")
