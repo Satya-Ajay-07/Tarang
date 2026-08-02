@@ -18,6 +18,9 @@ export default function ProfilePage() {
   const [location, setLocation] = useState('');
   const [country, setCountry] = useState('');
   const [phoneNumber, setPhoneNumber] = useState('');
+  const [website, setWebsite] = useState('');
+  const [twitterUrl, setTwitterUrl] = useState('');
+  const [githubUrl, setGithubUrl] = useState('');
   
   // Image Upload states
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
@@ -64,6 +67,9 @@ export default function ProfilePage() {
         setLocation(data.location || '');
         setCountry(data.country || '');
         setPhoneNumber(data.phone_number || '');
+        setWebsite(data.website || '');
+        setTwitterUrl(data.twitter_url || '');
+        setGithubUrl(data.github_url || '');
         setAvatarPreview(data.avatar_url || null);
         setCoverPreview(data.cover_url || null);
       }
@@ -151,6 +157,9 @@ export default function ProfilePage() {
           location,
           country,
           phone_number: phoneNumber,
+          website,
+          twitter_url: twitterUrl,
+          github_url: githubUrl,
           avatar_url: finalAvatarUrl,
           cover_url: finalCoverUrl
         })
@@ -239,6 +248,21 @@ export default function ProfilePage() {
             {profileData.phone_number && (
               <span className="flex items-center gap-1">📞 {profileData.phone_number}</span>
             )}
+            {profileData.website && (
+              <a href={profileData.website} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-aqua hover:underline">
+                🔗 Website
+              </a>
+            )}
+            {profileData.twitter_url && (
+              <a href={profileData.twitter_url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-aqua hover:underline">
+                🐦 Twitter
+              </a>
+            )}
+            {profileData.github_url && (
+              <a href={profileData.github_url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-aqua hover:underline">
+                💻 GitHub
+              </a>
+            )}
             <span>📅 Joined {new Date(profileData.created_at).toLocaleDateString()}</span>
           </div>
 
@@ -246,37 +270,54 @@ export default function ProfilePage() {
           <div className="flex gap-6 text-sm font-semibold pt-2 border-t border-slate-100 dark:border-slate-800/40 select-none">
             <button 
               onClick={() => handleShowFollowModal('riding')}
-              className="hover:underline cursor-pointer text-left"
+              className="hover:underline cursor-pointer text-left text-text-primary"
             >
-              <span className="font-bold text-slate-850 dark:text-slate-100">{profileData.riding_count}</span>
-              <span className="text-slate-400 ml-1">Riding</span>
+              <span className="font-bold">{profileData.riding_count}</span>
+              <span className="text-text-secondary ml-1">Riding</span>
             </button>
             <button 
               onClick={() => handleShowFollowModal('riders')}
-              className="hover:underline cursor-pointer text-left"
+              className="hover:underline cursor-pointer text-left text-text-primary"
             >
-              <span className="font-bold text-slate-850 dark:text-slate-100">{profileData.riders_count}</span>
-              <span className="text-slate-400 ml-1">Wave Riders</span>
+              <span className="font-bold">{profileData.riders_count}</span>
+              <span className="text-text-secondary ml-1">Wave Riders</span>
             </button>
-            <div>
-              <span className="font-bold text-slate-850 dark:text-slate-100">{profileData.wave_count}</span>
-              <span className="text-slate-400 ml-1">Waves</span>
+            <div className="text-text-primary">
+              <span className="font-bold">{profileData.wave_count}</span>
+              <span className="text-text-secondary ml-1">Waves</span>
             </div>
           </div>
         </div>
 
-        {/* User waves stream listing */}
+        {/* User waves stream listing with Pinned waves support */}
         <div className="p-6 space-y-4">
           <h3 className="text-sm font-bold uppercase tracking-wider text-slate-500 pb-2 border-b border-slate-100 dark:border-slate-800/40">
-            Your Waves
+            Waves
           </h3>
           {myWaves.length === 0 ? (
             <p className="text-center text-xs text-slate-400 py-10">You haven't created any waves yet.</p>
           ) : (
             <div className="space-y-4">
-              {myWaves.map((wave) => (
-                <WaveCard key={wave.id} wave={wave} onRefresh={fetchProfile} />
-              ))}
+              {/* Pinned Wave */}
+              {profileData.pinned_wave_id && myWaves.find(w => w.id === profileData.pinned_wave_id) && (
+                <div className="space-y-2">
+                  <div className="flex items-center gap-1.5 text-xs font-bold text-yellow-600 dark:text-yellow-400 pl-4">
+                    <span>📌</span>
+                    <span>Pinned Wave</span>
+                  </div>
+                  <WaveCard 
+                    wave={myWaves.find(w => w.id === profileData.pinned_wave_id)} 
+                    onRefresh={fetchProfile} 
+                  />
+                </div>
+              )}
+
+              {/* Remaining Waves */}
+              {myWaves
+                .filter(w => w.id !== profileData.pinned_wave_id)
+                .map((wave) => (
+                  <WaveCard key={wave.id} wave={wave} onRefresh={fetchProfile} />
+                ))}
             </div>
           )}
         </div>
@@ -434,6 +475,46 @@ export default function ProfilePage() {
                       placeholder="Phone Number"
                     />
                   </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">
+                      Website
+                    </label>
+                    <input
+                      type="url"
+                      value={website}
+                      onChange={(e) => setWebsite(e.target.value)}
+                      className="w-full text-sm rounded-2xl border border-slate-200 px-4 py-2 outline-none dark:border-slate-800 dark:bg-slate-950/40 dark:text-slate-200"
+                      placeholder="https://example.com"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">
+                      Twitter / X
+                    </label>
+                    <input
+                      type="url"
+                      value={twitterUrl}
+                      onChange={(e) => setTwitterUrl(e.target.value)}
+                      className="w-full text-sm rounded-2xl border border-slate-200 px-4 py-2 outline-none dark:border-slate-800 dark:bg-slate-950/40 dark:text-slate-200"
+                      placeholder="https://x.com/username"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">
+                    GitHub Link
+                  </label>
+                  <input
+                    type="url"
+                    value={githubUrl}
+                    onChange={(e) => setGithubUrl(e.target.value)}
+                    className="w-full text-sm rounded-2xl border border-slate-200 px-4 py-2 outline-none dark:border-slate-800 dark:bg-slate-950/40 dark:text-slate-200"
+                    placeholder="https://github.com/username"
+                  />
                 </div>
 
                 <div>

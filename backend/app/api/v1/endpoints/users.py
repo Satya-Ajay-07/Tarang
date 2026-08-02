@@ -35,6 +35,15 @@ def update_profile(
         current_user.country = user_update.country
     if user_update.phone_number is not None:
         current_user.phone_number = user_update.phone_number
+    if user_update.website is not None:
+        current_user.website = user_update.website
+    if user_update.twitter_url is not None:
+        current_user.twitter_url = user_update.twitter_url
+    if user_update.github_url is not None:
+        current_user.github_url = user_update.github_url
+    if user_update.pinned_wave_id is not None:
+        # Pinned wave id can be set to empty string or null to unpin
+        current_user.pinned_wave_id = None if user_update.pinned_wave_id == "" else user_update.pinned_wave_id
         
     db.commit()
     db.refresh(current_user)
@@ -62,6 +71,17 @@ def get_profile(
         WaveRider.rider_of_id == user.id
     ).first() is not None
 
+    # Calculate mutual followers
+    # Users who follow "user" AND are followed by "current_user"
+    followers_of_user = db.query(WaveRider.rider_id).filter(WaveRider.rider_of_id == user.id).subquery()
+    mutuals = db.query(User).join(
+        WaveRider, WaveRider.rider_of_id == User.id
+    ).filter(
+        WaveRider.rider_id == current_user.id,
+        User.id.in_(followers_of_user)
+    ).all()
+    mutual_riders = [{"id": m.id, "username": m.username, "full_name": m.full_name, "avatar_url": m.avatar_url} for m in mutuals]
+
     return {
         "id": user.id,
         "username": user.username,
@@ -72,12 +92,18 @@ def get_profile(
         "location": user.location,
         "country": user.country,
         "phone_number": user.phone_number if user.id == current_user.id else None,
+        "website": user.website,
+        "twitter_url": user.twitter_url,
+        "github_url": user.github_url,
+        "pinned_wave_id": user.pinned_wave_id,
         "created_at": user.created_at,
         "role": user.role,
         "wave_count": wave_count,
         "riders_count": riders_count,
         "riding_count": riding_count,
-        "is_riding": is_riding
+        "is_riding": is_riding,
+        "mutual_riders": mutual_riders,
+        "mutual_count": len(mutual_riders)
     }
 
 # Follow/Unfollow (Riding Toggle)

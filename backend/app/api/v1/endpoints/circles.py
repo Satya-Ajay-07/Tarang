@@ -5,6 +5,7 @@ from typing import List, Optional
 from app.api.deps import get_current_active_user
 from app.core.database import get_db
 from app.core.exceptions import NotFoundException, BadRequestException, ForbiddenException
+from pydantic import BaseModel
 from app.models.models import User, WaveCircle, CircleMember, Wave, WaveAlert
 from app.schemas.schemas import WaveCircleCreate, WaveCircleResponse
 
@@ -35,6 +36,7 @@ def enrich_circle(circle: WaveCircle, db: Session, current_user: User) -> WaveCi
         created_at=circle.created_at,
         members_count=members_count,
         joined_by_me=joined_by_me,
+        is_public=circle.is_public if hasattr(circle, "is_public") else True,
     )
 
 
@@ -50,6 +52,10 @@ def list_circles(
     query = db.query(WaveCircle)
     if search:
         query = query.filter(WaveCircle.name.ilike(f"%{search}%"))
+    # Hide private circles unless current_user is a member
+    private_member_ids = db.query(CircleMember.circle_id).filter(CircleMember.user_id == current_user.id).subquery()
+    query = query.filter((WaveCircle.is_public == True) | (WaveCircle.id.in_(private_member_ids)))
+    
     circles = query.order_by(WaveCircle.created_at.desc()).offset(skip).limit(limit).all()
     return [enrich_circle(c, db, current_user) for c in circles]
 
@@ -85,6 +91,7 @@ def create_circle(
         name=circle_in.name,
         slug=slug,
         description=circle_in.description,
+        is_public=circle_in.is_public if circle_in.is_public is not None else True,
         creator_id=current_user.id,
     )
     db.add(circle)
@@ -304,4 +311,112 @@ def demote_moderator(
         "user_id": user_id,
         "role": "member",
     }
+
+# Update circle settings
+class WaveCircleUpdate(BaseModel):
+    description: Optional[str] = None
+    banner_url: Optional[str] = None
+    is_public: Optional[bool] = None
+
+from pydantic import BaseModel
+
+@router.put("/{slug}", response_model=WaveCircleResponse)
+def update_circle(
+    slug: str,
+    circle_update: WaveCircleUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
+):
+    circle = db.query(WaveCircle).filter(WaveCircle.slug == slug).first()
+    if not circle:
+        raise NotFoundException(detail="Wave Circle not found")
+        
+    # Check permissions (creator or moderator can edit settings)
+    user_member = db.query(CircleMember).filter(
+        CircleMember.circle_id == circle.id,
+        CircleMember.user_id == current_user.id
+    ).first()
+    if not user_member or user_member.role not in ("creator", "moderator"):
+        raise ForbiddenException(detail="Only creators and moderators can update circle settings.")
+
+    if circle_update.description is not None:
+        circle.description = circle_update.description
+    if circle_update.banner_url is not None:
+        circle.banner_url = circle_update.banner_url
+    if circle_update.is_public is not None:
+        circle.is_public = circle_update.is_public
+
+    db.commit()
+    db.refresh(circle)
+    return enrich_circle(circle, db, current_user)
+
+# Invite or add member
+@router.post("/{slug}/members/{user_id}", status_code=200)
+def invite_member(
+    slug: str,
+    user_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
+):
+    circle = db.query(WaveCircle).filter(WaveCircle.slug == slug).first()
+    if not circle:
+        raise NotFoundException(detail="Wave Circle not found")
+
+    # Invite permission check (member, moderator, or creator can invite)
+    user_member = db.query(CircleMember).filter(
+        CircleMember.circle_id == circle.id,
+        CircleMember.user_id == current_user.id
+    ).first()
+    if not user_member:
+        raise ForbiddenException(detail="Only circle members can invite others.")
+
+    target_user = db.query(User).filter(User.id == user_id).first()
+    if not target_user:
+        raise NotFoundException(detail="Target user not found")
+
+    existing_membership = db.query(CircleMember).filter(
+        CircleMember.circle_id == circle.id,
+        CircleMember.user_id == user_id
+    ).first()
+    if existing_membership:
+        return {"message": "User is already a member of this circle.", "joined": True}
+
+    new_member = CircleMember(circle_id=circle.id, user_id=user_id, role="member")
+    db.add(new_member)
+    db.commit()
+    return {"message": f"Added @{target_user.username} to circle.", "joined": True}
+
+# Remove member
+@router.delete("/{slug}/members/{user_id}", status_code=200)
+def remove_member(
+    slug: str,
+    user_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
+):
+    circle = db.query(WaveCircle).filter(WaveCircle.slug == slug).first()
+    if not circle:
+        raise NotFoundException(detail="Wave Circle not found")
+
+    # Check permission (creator/moderator can kick; user can leave via POST /{slug}/join)
+    user_member = db.query(CircleMember).filter(
+        CircleMember.circle_id == circle.id,
+        CircleMember.user_id == current_user.id
+    ).first()
+    if not user_member or user_member.role not in ("creator", "moderator"):
+        raise ForbiddenException(detail="Only creators and moderators can remove members.")
+
+    target_membership = db.query(CircleMember).filter(
+        CircleMember.circle_id == circle.id,
+        CircleMember.user_id == user_id
+    ).first()
+    if not target_membership:
+        raise NotFoundException(detail="User is not a member of this circle.")
+
+    if target_membership.role == "creator":
+        raise ForbiddenException(detail="Cannot remove the circle creator.")
+
+    db.delete(target_membership)
+    db.commit()
+    return {"message": "Member removed from circle successfully."}
 

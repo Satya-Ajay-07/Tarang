@@ -23,6 +23,10 @@ class User(Base):
     location = Column(String(255), nullable=True)
     country = Column(String(100), nullable=True)
     phone_number = Column(String(50), nullable=True)
+    website = Column(String(255), nullable=True)
+    twitter_url = Column(String(255), nullable=True)
+    github_url = Column(String(255), nullable=True)
+    pinned_wave_id = Column(String(36), nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     is_active = Column(Boolean, default=True)
@@ -121,6 +125,7 @@ class WaveCircle(Base):
     slug = Column(String(100), unique=True, nullable=False, index=True)
     description = Column(Text, nullable=True)
     banner_url = Column(String(512), nullable=True)
+    is_public = Column(Boolean, default=True)
     creator_id = Column(String(36), ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
 
@@ -229,5 +234,17 @@ class PollVote(Base):
 
     __table_args__ = (
         UniqueConstraint('poll_id', 'user_id', name='_poll_user_vote_uc'),
+    )
+
+class Bookmark(Base):
+    __tablename__ = "bookmarks"
+
+    id = Column(String(36), primary_key=True, default=generate_uuid)
+    user_id = Column(String(36), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    wave_id = Column(String(36), ForeignKey("waves.id", ondelete="CASCADE"), nullable=False, index=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    __table_args__ = (
+        UniqueConstraint('user_id', 'wave_id', name='_user_wave_bookmark_uc'),
     )
 

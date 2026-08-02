@@ -78,22 +78,22 @@ export function Modal({
 
       {/* Panel */}
       <div
-        className="relative w-full bg-slate-900 border border-white/10 rounded-2xl shadow-2xl overflow-hidden animate-in fade-in-0 zoom-in-95 duration-200"
+        className="relative w-full bg-card-bg border border-card-border rounded-2xl shadow-2xl overflow-hidden animate-in fade-in-0 zoom-in-95 duration-200"
         style={{ maxWidth }}
       >
         {/* Header */}
         {(title || description) && (
-          <div className="px-6 pt-6 pb-4 border-b border-white/10">
+          <div className="px-6 pt-6 pb-4 border-b border-card-border">
             {title && (
               <h2
                 id="modal-title"
-                className="text-lg font-bold text-slate-100"
+                className="text-lg font-bold text-text-primary"
               >
                 {title}
               </h2>
             )}
             {description && (
-              <p id="modal-desc" className="mt-1 text-sm text-slate-400">
+              <p id="modal-desc" className="mt-1 text-sm text-text-secondary">
                 {description}
               </p>
             )}
@@ -101,12 +101,12 @@ export function Modal({
         )}
 
         {/* Body */}
-        <div className="px-6 py-5">{children}</div>
+        <div className="px-6 py-5 text-text-primary">{children}</div>
 
         {/* Close button */}
         <button
           onClick={onClose}
-          className="absolute top-4 right-4 p-1.5 rounded-lg text-slate-400 hover:text-slate-200 hover:bg-white/10 transition-colors"
+          className="absolute top-4 right-4 p-1.5 rounded-lg text-text-secondary hover:text-text-primary hover:bg-black/5 dark:hover:bg-white/5 transition-colors"
           aria-label="Close modal"
         >
           <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">

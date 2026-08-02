@@ -168,33 +168,71 @@ export default function UserProfilePage() {
             {profileData.country && (
               <span className="flex items-center gap-1">🌍 {profileData.country}</span>
             )}
+            {profileData.website && (
+              <a href={profileData.website} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-aqua hover:underline">
+                🔗 Website
+              </a>
+            )}
+            {profileData.twitter_url && (
+              <a href={profileData.twitter_url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-aqua hover:underline">
+                🐦 Twitter
+              </a>
+            )}
+            {profileData.github_url && (
+              <a href={profileData.github_url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-aqua hover:underline">
+                💻 GitHub
+              </a>
+            )}
             <span>📅 Joined {new Date(profileData.created_at).toLocaleDateString()}</span>
           </div>
+
+          {/* Mutual Followers UI banner */}
+          {profileData.mutual_count > 0 && (
+            <div className="flex items-center gap-2 p-2 bg-slate-50 dark:bg-slate-900/50 rounded-2xl border border-card-border">
+              <div className="flex -space-x-2 overflow-hidden">
+                {profileData.mutual_riders.slice(0, 3).map((m: any) => (
+                  <div key={m.id} className="inline-block h-6 w-6 rounded-full ring-2 ring-white dark:ring-tarang-bg-dark overflow-hidden">
+                    {m.avatar_url ? (
+                      <img src={m.avatar_url} alt={m.username} className="h-full w-full object-cover" />
+                    ) : (
+                      <div className="h-full w-full bg-slate-300 flex items-center justify-center text-[10px] font-bold">
+                        {m.username[0].toUpperCase()}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+              <span className="text-[10px] font-bold text-text-secondary">
+                Ridden with by {profileData.mutual_riders[0].full_name || profileData.mutual_riders[0].username}
+                {profileData.mutual_count > 1 ? ` and ${profileData.mutual_count - 1} other mutuals` : ''}
+              </span>
+            </div>
+          )}
 
           {/* Stats counts riders / riding */}
           <div className="flex gap-6 text-sm font-semibold pt-2 border-t border-slate-100 dark:border-slate-800/40 select-none">
             <button 
               onClick={() => handleShowFollowModal('riding')}
-              className="hover:underline cursor-pointer text-left"
+              className="hover:underline cursor-pointer text-left text-text-primary"
             >
-              <span className="font-bold text-slate-850 dark:text-slate-100">{ridingCount}</span>
-              <span className="text-slate-400 ml-1">Riding</span>
+              <span className="font-bold">{ridingCount}</span>
+              <span className="text-text-secondary ml-1">Riding</span>
             </button>
             <button 
               onClick={() => handleShowFollowModal('riders')}
-              className="hover:underline cursor-pointer text-left"
+              className="hover:underline cursor-pointer text-left text-text-primary"
             >
-              <span className="font-bold text-slate-850 dark:text-slate-100">{ridersCount}</span>
-              <span className="text-slate-400 ml-1">Wave Riders</span>
+              <span className="font-bold">{ridersCount}</span>
+              <span className="text-text-secondary ml-1">Wave Riders</span>
             </button>
-            <div>
-              <span className="font-bold text-slate-850 dark:text-slate-100">{profileData.wave_count || 0}</span>
-              <span className="text-slate-400 ml-1">Waves</span>
+            <div className="text-text-primary">
+              <span className="font-bold">{profileData.wave_count || 0}</span>
+              <span className="text-text-secondary ml-1">Waves</span>
             </div>
           </div>
         </div>
 
-        {/* User waves stream listing */}
+        {/* User waves stream listing with Pinned waves support */}
         <div className="p-6 space-y-4">
           <h3 className="text-sm font-bold uppercase tracking-wider text-slate-500 pb-2 border-b border-slate-100 dark:border-slate-800/40">
             Waves
@@ -203,9 +241,26 @@ export default function UserProfilePage() {
             <p className="text-center text-xs text-slate-400 py-10">This rider hasn't created any waves yet.</p>
           ) : (
             <div className="space-y-4">
-              {userWaves.map((wave) => (
-                <WaveCard key={wave.id} wave={wave} onRefresh={fetchProfile} />
-              ))}
+              {/* Pinned Wave */}
+              {profileData.pinned_wave_id && userWaves.find(w => w.id === profileData.pinned_wave_id) && (
+                <div className="space-y-2">
+                  <div className="flex items-center gap-1.5 text-xs font-bold text-yellow-600 dark:text-yellow-400 pl-4">
+                    <span>📌</span>
+                    <span>Pinned Wave</span>
+                  </div>
+                  <WaveCard 
+                    wave={userWaves.find(w => w.id === profileData.pinned_wave_id)} 
+                    onRefresh={fetchProfile} 
+                  />
+                </div>
+              )}
+
+              {/* Remaining Waves */}
+              {userWaves
+                .filter(w => w.id !== profileData.pinned_wave_id)
+                .map((wave) => (
+                  <WaveCard key={wave.id} wave={wave} onRefresh={fetchProfile} />
+                ))}
             </div>
           )}
         </div>

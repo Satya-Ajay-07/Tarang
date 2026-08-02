@@ -53,3 +53,22 @@ def mark_read(
     alert.is_read = True
     db.commit()
     return {"success": True, "message": "Alert marked as read"}
+
+# Delete alert
+@router.delete("/{alert_id}")
+def delete_alert(
+    alert_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
+):
+    alert = db.query(WaveAlert).filter(
+        WaveAlert.id == alert_id,
+        WaveAlert.recipient_id == current_user.id
+    ).first()
+    
+    if not alert:
+        raise NotFoundException(detail="Alert not found")
+        
+    db.delete(alert)
+    db.commit()
+    return {"success": True, "message": "Alert deleted successfully"}

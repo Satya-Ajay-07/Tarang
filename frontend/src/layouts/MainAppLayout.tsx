@@ -100,6 +100,7 @@ export default function MainAppLayout({ children }: { children: React.ReactNode 
     { name: 'Wave Alerts', path: '/alerts', icon: '🔔', badge: unreadAlerts },
     { name: 'Messages', path: '/messages', icon: '💬' },
     { name: 'Wave Circles', path: '/circles', icon: '🎯' },
+    { name: 'Saved', path: '/saved', icon: '🔖' },
     { name: 'You', path: '/you', icon: '👤' },
   ];
 

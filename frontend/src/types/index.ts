@@ -7,6 +7,10 @@ export interface User {
   cover_url?: string;
   bio?: string;
   location?: string;
+  website?: string;
+  twitter_url?: string;
+  github_url?: string;
+  pinned_wave_id?: string;
   created_at: string;
   role: string;
 }

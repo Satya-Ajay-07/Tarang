@@ -85,6 +85,7 @@ function CircleCard({
 function CreateCircleModal({ onClose, onCreate }: { onClose: () => void; onCreate: () => void }) {
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
+  const [isPublic, setIsPublic] = useState(true);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -99,7 +100,11 @@ function CreateCircleModal({ onClose, onCreate }: { onClose: () => void; onCreat
     try {
       const res = await apiRequest('/circles', {
         method: 'POST',
-        body: JSON.stringify({ name: name.trim(), description: description.trim() || null }),
+        body: JSON.stringify({ 
+          name: name.trim(), 
+          description: description.trim() || null,
+          is_public: isPublic
+        }),
       });
       if (!res.ok) {
         const d = await res.json();
@@ -147,6 +152,17 @@ function CreateCircleModal({ onClose, onCreate }: { onClose: () => void; onCreat
               maxLength={240}
               className="w-full resize-none rounded-2xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm outline-none focus:border-aqua dark:border-slate-700 dark:bg-slate-800"
             />
+          </div>
+          <div>
+            <label className="flex items-center gap-3 p-3 rounded-2xl border border-slate-250 bg-slate-50 dark:border-slate-800 dark:bg-slate-900/60 cursor-pointer text-xs font-semibold text-text-primary">
+              <input
+                type="checkbox"
+                checked={isPublic}
+                onChange={(e) => setIsPublic(e.target.checked)}
+                className="h-4 w-4 rounded text-aqua focus:ring-aqua"
+              />
+              <span>Public Circle (Anyone can discover and join)</span>
+            </label>
           </div>
           <div className="flex justify-end gap-2 pt-1">
             <button

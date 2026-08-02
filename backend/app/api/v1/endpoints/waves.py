@@ -9,7 +9,7 @@ from app.core.database import get_db
 from app.core.redis import get_redis
 from datetime import datetime, timedelta
 from app.core.exceptions import NotFoundException, BadRequestException, ForbiddenException
-from app.models.models import User, Wave, Ripple, WaveAlert, WaveRider, Poll, PollOption, PollVote
+from app.models.models import User, Wave, Ripple, WaveAlert, WaveRider, Poll, PollOption, PollVote, Bookmark
 from app.schemas.schemas import WaveCreate, WaveResponse, WaveUpdate, PollResponse, PollOptionResponse
 
 router = APIRouter()
@@ -27,6 +27,18 @@ def enrich_wave(wave: Wave, db: Session, current_user: User) -> WaveResponse:
     joins_count = db.query(Wave).filter(Wave.parent_wave_id == wave.id).count()
     spreads_count = db.query(Wave).filter(Wave.spread_from_id == wave.id).count()
     
+    # Spread status
+    spread_by_me = db.query(Wave).filter(
+        Wave.creator_id == current_user.id,
+        Wave.spread_from_id == wave.id
+    ).first() is not None
+
+    # Bookmark status
+    bookmarked_by_me = db.query(Bookmark).filter(
+        Bookmark.user_id == current_user.id,
+        Bookmark.wave_id == wave.id
+    ).first() is not None
+
     # Spread Wave resolution
     spread_from = None
     if wave.spread_from_id:
@@ -87,6 +99,8 @@ def enrich_wave(wave: Wave, db: Session, current_user: User) -> WaveResponse:
         joins_count=joins_count,
         spreads_count=spreads_count,
         rippled_by_me=rippled_by_me,
+        spread_by_me=spread_by_me,
+        bookmarked_by_me=bookmarked_by_me,
         poll=poll_response
     )
 
@@ -281,7 +295,7 @@ def toggle_ripple(
         return {"rippled": True, "ripples_count": db.query(Ripple).filter(Ripple.wave_id == wave_id).count()}
 
 # Spread Wave (Repost / Retweet)
-@router.post("/{wave_id}/spread", response_model=WaveResponse)
+@router.post("/{wave_id}/spread")
 def spread_wave(
     wave_id: str,
     db: Session = Depends(get_db),
@@ -301,12 +315,14 @@ def spread_wave(
     # Undo spread
     if existing_spread:
         db.delete(existing_spread)
-
         db.commit()
-
+        # Refresh the parent wave object inside Session to get updated count
+        db.refresh(wave)
+        enriched = enrich_wave(wave, db, current_user)
+        # We can add an extra flag so the frontend knows it was removed
         return {
-            "message": "Spread removed",
-            "spread": False
+            "spread": False,
+            "wave": enriched
         }
 
     spread = Wave(
@@ -327,8 +343,12 @@ def spread_wave(
         db.add(alert)
         
     db.commit()
-    db.refresh(spread)
-    return enrich_wave(spread, db, current_user)
+    db.refresh(wave)
+    enriched = enrich_wave(wave, db, current_user)
+    return {
+        "spread": True,
+        "wave": enriched
+    }
 
 # Update Wave
 @router.put("/{wave_id}", response_model=WaveResponse)
@@ -418,5 +438,76 @@ def vote_poll(
     db.commit()
     db.refresh(wave)
     return enrich_wave(wave, db, current_user)
+
+# Report Wave
+@router.post("/{wave_id}/report")
+def report_wave(
+    wave_id: str,
+    payload: dict,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
+):
+    wave = db.query(Wave).filter(Wave.id == wave_id).first()
+    if not wave:
+        raise NotFoundException(detail="Wave not found")
+    
+    reason = payload.get("reason", "Other")
+    print(f"[Tarang Report] User {current_user.username} reported Wave {wave_id} for: {reason}")
+    return {"message": "Wave reported successfully", "wave_id": wave_id, "reason": reason}
+
+# Retrieve bookmarked waves
+@router.get("/bookmarks", response_model=List[WaveResponse])
+def get_bookmarks(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
+):
+    bookmarks = db.query(Bookmark).filter(Bookmark.user_id == current_user.id).order_by(Bookmark.created_at.desc()).all()
+    wave_ids = [b.wave_id for b in bookmarks]
+    waves = db.query(Wave).filter(Wave.id.in_(wave_ids)).all()
+    # Preserve order
+    wave_map = {w.id: w for w in waves}
+    ordered_waves = [wave_map[wid] for wid in wave_ids if wid in wave_map]
+    return [enrich_wave(w, db, current_user) for w in ordered_waves]
+
+# Add a bookmark
+@router.post("/{wave_id}/bookmark")
+def add_bookmark(
+    wave_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
+):
+    wave = db.query(Wave).filter(Wave.id == wave_id).first()
+    if not wave:
+        raise NotFoundException(detail="Wave not found")
+        
+    existing_bookmark = db.query(Bookmark).filter(
+        Bookmark.user_id == current_user.id,
+        Bookmark.wave_id == wave_id
+    ).first()
+    if existing_bookmark:
+        return {"message": "Wave already bookmarked", "bookmarked": True}
+        
+    new_bookmark = Bookmark(user_id=current_user.id, wave_id=wave_id)
+    db.add(new_bookmark)
+    db.commit()
+    return {"message": "Wave bookmarked successfully", "bookmarked": True}
+
+# Delete a bookmark
+@router.delete("/{wave_id}/bookmark")
+def delete_bookmark(
+    wave_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
+):
+    bookmark = db.query(Bookmark).filter(
+        Bookmark.user_id == current_user.id,
+        Bookmark.wave_id == wave_id
+    ).first()
+    if not bookmark:
+        raise NotFoundException(detail="Bookmark not found")
+        
+    db.delete(bookmark)
+    db.commit()
+    return {"message": "Bookmark removed successfully", "bookmarked": False}
 
 

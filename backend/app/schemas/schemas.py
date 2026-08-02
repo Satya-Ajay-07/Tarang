@@ -35,6 +35,10 @@ class UserUpdate(BaseModel):
     cover_url: Optional[str] = None
     country: Optional[str] = None
     phone_number: Optional[str] = None
+    website: Optional[str] = None
+    twitter_url: Optional[str] = None
+    github_url: Optional[str] = None
+    pinned_wave_id: Optional[str] = None
 
 class UserResponse(UserBase):
     id: str
@@ -45,6 +49,10 @@ class UserResponse(UserBase):
     created_at: datetime
     role: str
     phone_number: Optional[str] = None  # Expose phone number securely if retrieved by self
+    website: Optional[str] = None
+    twitter_url: Optional[str] = None
+    github_url: Optional[str] = None
+    pinned_wave_id: Optional[str] = None
 
     class Config:
         from_attributes = True
@@ -113,6 +121,8 @@ class WaveResponse(WaveBase):
     joins_count: int = 0
     spreads_count: int = 0
     rippled_by_me: bool = False
+    spread_by_me: bool = False
+    bookmarked_by_me: bool = False
     poll: Optional[PollResponse] = None
 
     class Config:
@@ -122,6 +132,7 @@ class WaveResponse(WaveBase):
 class WaveCircleBase(BaseModel):
     name: str
     description: Optional[str] = None
+    is_public: Optional[bool] = True
 
 class WaveCircleCreate(WaveCircleBase):
     pass
@@ -134,6 +145,18 @@ class WaveCircleResponse(WaveCircleBase):
     created_at: datetime
     members_count: int = 0
     joined_by_me: bool = False
+    is_public: bool = True
+
+    class Config:
+        from_attributes = True
+
+class CircleMemberResponse(BaseModel):
+    id: str
+    circle_id: str
+    user_id: str
+    role: str
+    joined_at: datetime
+    user: UserResponse
 
     class Config:
         from_attributes = True
