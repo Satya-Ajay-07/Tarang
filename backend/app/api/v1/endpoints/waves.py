@@ -292,12 +292,22 @@ def spread_wave(
         raise NotFoundException(detail="Wave not found")
 
     # Prevent duplicating spread
-    exists = db.query(Wave).filter(
+    # Check if user already spread this wave
+    existing_spread = db.query(Wave).filter(
         Wave.creator_id == current_user.id,
         Wave.spread_from_id == wave_id
     ).first()
-    if exists:
-        return enrich_wave(exists, db, current_user)
+
+    # Undo spread
+    if existing_spread:
+        db.delete(existing_spread)
+
+        db.commit()
+
+        return {
+            "message": "Spread removed",
+            "spread": False
+        }
 
     spread = Wave(
         creator_id=current_user.id,

@@ -36,6 +36,7 @@ class User(Base):
 
 class Wave(Base):
     __tablename__ = "waves"
+    
 
     id = Column(String(36), primary_key=True, default=generate_uuid)
     creator_id = Column(String(36), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
@@ -50,8 +51,7 @@ class Wave(Base):
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     # Spread Wave (Repost) support
-    spread_from_id = Column(String(36), ForeignKey("waves.id", ondelete="SET NULL"), nullable=True)
-
+    spread_from_id = Column(String(36),ForeignKey("waves.id", ondelete="CASCADE"),nullable=True,index=True)
     # Join Wave (Reply/Comment) support — column MUST be declared before relationships
     parent_wave_id = Column(String(36), ForeignKey("waves.id", ondelete="CASCADE"), nullable=True)
 
@@ -72,14 +72,24 @@ class Wave(Base):
         "Wave",
         foreign_keys=[parent_wave_id],
         back_populates="parent_wave",
+        cascade="all, delete-orphan"
+
     )
 
     # Self-referential: a wave can be a repost (spread) of another wave
     spread_from = relationship(
+    "Wave",
+    foreign_keys=[spread_from_id],
+    remote_side=[id],
+    back_populates="spreads",
+    overlaps="joins,parent_wave",
+    )
+
+    spreads = relationship(
         "Wave",
         foreign_keys=[spread_from_id],
-        remote_side=[id],
-        overlaps="joins,parent_wave",
+        back_populates="spread_from",
+        cascade="all, delete-orphan"
     )
 
     ripples = relationship("Ripple", back_populates="wave", cascade="all, delete-orphan")
