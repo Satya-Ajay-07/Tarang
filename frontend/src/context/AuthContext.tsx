@@ -35,10 +35,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
 
     try {
-      const response = await apiRequest('/auth/refresh', {
-        method: 'POST',
-        skipAuth: true,
-      });
+      const refreshToken = localStorage.getItem("refresh_token");
+
+      if (!refreshToken) {
+        setLoading(false);
+        return; 
+      }
+
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/auth/refresh`,
+        {
+          method: "POST",
+          credentials: "include",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${refreshToken}`,
+          },
+        }
+    );
 
      if (response.ok) {
     const data = await response.json();
