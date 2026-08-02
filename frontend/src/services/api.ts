@@ -95,8 +95,7 @@ async function attemptTokenRefresh() {
         return false;
     }
 
-    console.log("✅ Sending Authorization:", `Bearer ${refreshToken}`);
-
+    console.log("Authorization header being sent:", `Bearer ${refreshToken}`);
     const res = await fetch(`${API_URL}/auth/refresh`, {
         method: "POST",
         credentials: "include",

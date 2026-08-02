@@ -132,7 +132,15 @@ def refresh_token(
 
     refresh_token = None
 
-    auth = request.headers.get("Authorization")
+    print("=" * 60)
+    print("ALL HEADERS")
+
+    for k, v in request.headers.items():
+        print(k, ":", v)
+
+    print("=" * 60)
+
+    auth = request.headers.get("authorization")
     print("Authorization Header:", auth)
 
     if auth and auth.startswith("Bearer "):
