@@ -7,7 +7,7 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 
 function VerifyEmailForm() {
-  const { verifyEmail } = useAuth();
+  const { verifyEmail, resendVerification } = useAuth();
   const searchParams = useSearchParams();
   const router = useRouter();
   
@@ -17,9 +17,20 @@ function VerifyEmailForm() {
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const [email, setEmail] = useState('');
+  const [resendSuccess, setResendSuccess] = useState<string | null>(null);
+  const [resendError, setResendError] = useState<string | null>(null);
+  const [cooldown, setCooldown] = useState(0);
+  const [resending, setResending] = useState(false);
+
   useEffect(() => {
     const isPending = searchParams.get('pending');
     const t = searchParams.get('token');
+    const urlEmail = searchParams.get('email');
+    
+    if (urlEmail) {
+      setEmail(urlEmail);
+    }
     
     if (isPending === 'true') {
       setPending(true);
@@ -28,6 +39,13 @@ function VerifyEmailForm() {
       verifyToken(t);
     }
   }, [searchParams]);
+
+  useEffect(() => {
+    if (cooldown > 0) {
+      const timer = setTimeout(() => setCooldown(cooldown - 1), 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [cooldown]);
 
   const verifyToken = async (tokenStr: string) => {
     setLoading(true);
@@ -44,6 +62,60 @@ function VerifyEmailForm() {
       setLoading(false);
     }
   };
+
+  const handleResend = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!email) {
+      setResendError('Please enter your email address.');
+      return;
+    }
+    setResending(true);
+    setResendError(null);
+    setResendSuccess(null);
+    try {
+      await resendVerification(email);
+      setResendSuccess('Verification email resent successfully! Please check your inbox.');
+      setCooldown(60);
+    } catch (err: any) {
+      setResendError(err.message || 'Failed to resend verification email.');
+      if (err.code === 'RESEND_COOLDOWN') {
+        setCooldown(60);
+      }
+    } finally {
+      setResending(false);
+    }
+  };
+
+  const renderResendForm = () => (
+    <form onSubmit={handleResend} className="mt-6 border-t border-slate-100 pt-5 dark:border-slate-800/40 space-y-3">
+      <p className="text-[11px] text-slate-500 dark:text-slate-400 font-semibold text-left">
+        Didn't receive the email or verification link expired?
+      </p>
+      {resendSuccess && (
+        <p className="text-xs text-green-600 dark:text-green-400 font-semibold text-left">{resendSuccess}</p>
+      )}
+      {resendError && (
+        <p className="text-xs text-red-500 font-semibold text-left">{resendError}</p>
+      )}
+      <div className="flex gap-2">
+        <input
+          type="email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          required
+          placeholder="rider@tarang.in"
+          className="flex-1 text-xs rounded-xl border border-slate-200 px-3 py-2 outline-none dark:border-slate-850 dark:bg-slate-950/40 dark:text-slate-200"
+        />
+        <button
+          type="submit"
+          disabled={resending || cooldown > 0}
+          className="rounded-xl bg-aqua px-3 py-2 text-xs font-bold text-white hover:bg-ocean disabled:opacity-50 transition-all flex-shrink-0"
+        >
+          {resending ? 'Resending...' : cooldown > 0 ? `Wait ${cooldown}s` : 'Resend'}
+        </button>
+      </div>
+    </form>
+  );
 
   return (
     <div className="z-10 w-full max-w-md rounded-3xl border border-slate-200/60 bg-white/80 p-8 shadow-xl backdrop-blur-md dark:border-slate-800/40 dark:bg-slate-900/85">
@@ -65,6 +137,7 @@ function VerifyEmailForm() {
           <p className="text-sm text-slate-500 dark:text-slate-400">
             A verification link has been sent to your email. Please check your inbox (or simulated logs if in development mode) to activate your account.
           </p>
+          {renderResendForm()}
           <div className="pt-4">
             <Link href="/login" className="text-aqua font-bold hover:underline">
               Return to Login
@@ -100,6 +173,7 @@ function VerifyEmailForm() {
           </div>
           <h3 className="text-lg font-bold text-slate-800 dark:text-slate-200">Verification Failed</h3>
           <p className="text-sm text-red-500">{error}</p>
+          {renderResendForm()}
           <div className="pt-4">
             <Link href="/login" className="text-aqua font-bold hover:underline">
               Back to Login

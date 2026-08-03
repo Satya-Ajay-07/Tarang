@@ -28,6 +28,8 @@ def get_current_user(token: str = Depends(get_token_from_header), db: Session = 
 def get_current_active_user(current_user: User = Depends(get_current_user)) -> User:
     if not current_user.is_active:
         raise UnauthorizedException(detail="Inactive user", code="USER_INACTIVE")
+    if getattr(current_user, "is_deactivated", False):
+        raise UnauthorizedException(detail="Account is deactivated", code="USER_DEACTIVATED")
     return current_user
 
 class RoleChecker:

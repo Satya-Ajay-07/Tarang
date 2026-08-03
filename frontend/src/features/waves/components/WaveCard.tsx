@@ -17,8 +17,16 @@ export const WaveCard: React.FC<WaveCardProps> = ({ wave, onRefresh }) => {
   const router = useRouter();
   const { user } = useAuth();
 
-  const isSpreadWave = wave.spread_from_id !== null && wave.spread_from !== null;
-  const activeWaveData = isSpreadWave ? wave.spread_from : wave;
+  const isSpreadWave = wave.spread_from_id !== null && wave.spread_from_id !== undefined;
+  const isQuoteSpread = isSpreadWave && wave.content !== null && wave.content !== '';
+  const activeWaveData = (isSpreadWave && !isQuoteSpread) ? wave.spread_from : wave;
+
+  // Quote Spread states
+  const [showQuoteModal, setShowQuoteModal] = useState(false);
+  const [quoteThoughts, setQuoteThoughts] = useState('');
+  const [submittingQuote, setSubmittingQuote] = useState(false);
+  const [showSpreadMenu, setShowSpreadMenu] = useState(false);
+  const spreadMenuRef = useRef<HTMLDivElement>(null);
 
   const [rippled, setRippled] = useState(wave.rippled_by_me);
   const [ripplesCount, setRipplesCount] = useState(wave.ripples_count);
@@ -66,6 +74,21 @@ export const WaveCard: React.FC<WaveCardProps> = ({ wave, onRefresh }) => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, [showMenu]);
+
+  // Auto-close spread menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (spreadMenuRef.current && !spreadMenuRef.current.contains(e.target as Node)) {
+        setShowSpreadMenu(false);
+      }
+    };
+    if (showSpreadMenu) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showSpreadMenu]);
 
   // Display toast feedback utility helper
   const triggerToast = (msg: string) => {
@@ -123,6 +146,34 @@ export const WaveCard: React.FC<WaveCardProps> = ({ wave, onRefresh }) => {
       triggerToast("An error occurred.");
     } finally {
       setIsSpreading(false);
+    }
+  };
+
+  const handleQuoteSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!quoteThoughts.trim()) return;
+    setSubmittingQuote(true);
+    try {
+      const res = await apiRequest('/waves', {
+        method: 'POST',
+        body: JSON.stringify({
+          content: quoteThoughts,
+          spread_from_id: activeWaveData.id
+        })
+      });
+      if (res.ok) {
+        setQuoteThoughts('');
+        setShowQuoteModal(false);
+        triggerToast("Spread with thoughts posted!");
+        if (onRefresh) onRefresh();
+      } else {
+        triggerToast("Failed to quote spread.");
+      }
+    } catch (err) {
+      console.error(err);
+      triggerToast("An error occurred.");
+    } finally {
+      setSubmittingQuote(false);
     }
   };
 
@@ -327,6 +378,28 @@ export const WaveCard: React.FC<WaveCardProps> = ({ wave, onRefresh }) => {
     .replace('about ', '')
     .replace('less than a minute ago', 'just now');
 
+  const renderContent = (content: string) => {
+    if (!content) return null;
+    const regex = /(#[a-zA-Z0-9_]+)/g;
+    const parts = content.split(regex);
+    return parts.map((part, index) => {
+      if (part.startsWith('#')) {
+        const tag = part.slice(1);
+        return (
+          <Link
+            key={index}
+            href={`/hashtags/${tag.toLowerCase()}`}
+            onClick={(e) => e.stopPropagation()}
+            className="text-aqua hover:underline font-semibold"
+          >
+            {part}
+          </Link>
+        );
+      }
+      return part;
+    });
+  };
+
   return (
     <div className="rounded-3xl border border-card-border bg-card-bg p-5 shadow-[0_2px_8px_rgba(0,0,0,0.04)] transition-all hover:shadow-[0_4px_16px_rgba(0,0,0,0.08)] space-y-4 relative">
       {/* Absolute Toast alert feedback */}
@@ -338,9 +411,13 @@ export const WaveCard: React.FC<WaveCardProps> = ({ wave, onRefresh }) => {
 
       {/* Spread header if applicable */}
       {isSpreadWave && (
-        <div className="flex items-center gap-2 text-xs font-semibold text-text-secondary">
+        <div className="flex items-center gap-2 text-xs font-semibold text-[#0891B2]">
           <span>🔁</span>
-          <span>@{wave.creator.username} spread this wave</span>
+          <span>
+            {isQuoteSpread 
+              ? `@${wave.creator.username} spread a Wave` 
+              : `@${wave.creator.username} spread this wave`}
+          </span>
         </div>
       )}
 
@@ -359,7 +436,14 @@ export const WaveCard: React.FC<WaveCardProps> = ({ wave, onRefresh }) => {
               <h4 className="text-sm font-bold leading-none group-hover:underline text-text-primary">{activeWaveData.creator.full_name || activeWaveData.creator.username}</h4>
               <span className="text-xs text-text-secondary">@{activeWaveData.creator.username}</span>
             </div>
-            <span className="text-[10px] text-text-secondary">{timeAgo}</span>
+            <span className="text-[10px] text-text-secondary flex items-center gap-1.5">
+              {timeAgo}
+              {activeWaveData.is_edited && (
+                <span className="inline-flex items-center rounded bg-slate-100 px-1.5 py-0.5 text-[9px] font-bold text-[#0891B2] dark:bg-slate-800/60 dark:text-foam">
+                  Edited
+                </span>
+              )}
+            </span>
           </div>
         </Link>
 
@@ -440,7 +524,7 @@ export const WaveCard: React.FC<WaveCardProps> = ({ wave, onRefresh }) => {
 
       {/* Content */}
       <div className="pl-13 text-sm leading-relaxed text-text-primary">
-        <p className="whitespace-pre-wrap">{activeWaveData.content}</p>
+        <p className="whitespace-pre-wrap">{renderContent(activeWaveData.content)}</p>
         
         {activeWaveData.media_url && (
           <div className="mt-3 overflow-hidden rounded-2xl border border-card-border">
@@ -448,6 +532,47 @@ export const WaveCard: React.FC<WaveCardProps> = ({ wave, onRefresh }) => {
               <video src={activeWaveData.media_url} controls className="w-full max-h-96 object-cover" />
             ) : (
               <img src={activeWaveData.media_url} alt="Wave attachment" className="w-full max-h-96 object-cover" />
+            )}
+          </div>
+        )}
+
+        {/* Embedded Original Wave for Quote Spreads */}
+        {isQuoteSpread && (
+          <div className="mt-3">
+            {wave.spread_from ? (
+              <div 
+                onClick={(e) => {
+                  e.stopPropagation();
+                  router.push(`/you/${wave.spread_from.creator.username}`);
+                }}
+                className="p-4 rounded-2xl border border-card-border bg-slate-50/50 dark:bg-slate-900/40 hover:bg-slate-50 dark:hover:bg-slate-900/60 transition-colors cursor-pointer text-left"
+              >
+                <div className="flex items-center gap-2 mb-1.5">
+                  <div className="h-5 w-5 rounded-full bg-gradient-to-tr from-ocean to-aqua flex items-center justify-center text-white text-[8px] font-bold overflow-hidden shrink-0">
+                    {wave.spread_from.creator.avatar_url ? (
+                      <img src={wave.spread_from.creator.avatar_url} alt="Avatar" className="h-full w-full object-cover" />
+                    ) : (
+                      wave.spread_from.creator.username[0].toUpperCase()
+                    )}
+                  </div>
+                  <span className="text-xs font-bold text-text-primary">{wave.spread_from.creator.full_name || wave.spread_from.creator.username}</span>
+                  <span className="text-[10px] text-text-secondary">@{wave.spread_from.creator.username}</span>
+                </div>
+                <p className="text-xs text-text-primary whitespace-pre-wrap">{renderContent(wave.spread_from.content)}</p>
+                {wave.spread_from.media_url && (
+                  <div className="mt-2 overflow-hidden rounded-xl border border-card-border max-h-40">
+                    {wave.spread_from.media_type === 'video' ? (
+                      <video src={wave.spread_from.media_url} className="w-full max-h-40 object-cover" />
+                    ) : (
+                      <img src={wave.spread_from.media_url} alt="Attached media" className="w-full max-h-40 object-cover" />
+                    )}
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="p-4 rounded-2xl border border-dashed border-card-border bg-slate-50/20 dark:bg-slate-900/20 text-xs font-semibold text-text-secondary text-center">
+                🚫 This original Wave is no longer available.
+              </div>
             )}
           </div>
         )}
@@ -476,16 +601,51 @@ export const WaveCard: React.FC<WaveCardProps> = ({ wave, onRefresh }) => {
         </button>
 
         {/* Spread action */}
-        <button
-          onClick={handleSpread}
-          disabled={isSpreading}
-          className={`flex items-center gap-2 py-1 px-3 rounded-full transition-colors ${
-            spreaded ? 'text-teal-500 bg-teal-500/5' : 'hover:text-teal-500 hover:bg-teal-500/5'
-          } ${isSpreading ? 'opacity-50 cursor-not-allowed' : ''}`}
-        >
-          <span>{isSpreading ? '⏳' : '🔁'}</span>
-          <span>{spreadsCount} Spread</span>
-        </button>
+        <div className="relative" ref={spreadMenuRef}>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              // Prevent quoting deleted waves
+              if (wave.spread_from_id && !wave.spread_from) {
+                triggerToast("Cannot spread a deleted Wave.");
+                return;
+              }
+              setShowSpreadMenu(!showSpreadMenu);
+            }}
+            disabled={isSpreading}
+            className={`flex items-center gap-2 py-1 px-3 rounded-full transition-colors ${
+              spreaded ? 'text-teal-500 bg-teal-500/5' : 'hover:text-teal-500 hover:bg-teal-500/5'
+            } ${isSpreading ? 'opacity-50 cursor-not-allowed' : ''}`}
+          >
+            <span>{isSpreading ? '⏳' : '🔁'}</span>
+            <span>{spreadsCount} Spread</span>
+          </button>
+
+          {showSpreadMenu && (
+            <div className="absolute bottom-full mb-1 left-1/2 transform -translate-x-1/2 w-48 rounded-2xl border border-card-border bg-card-bg shadow-xl z-30 overflow-hidden py-1">
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowSpreadMenu(false);
+                  handleSpread(e);
+                }}
+                className="flex w-full items-center px-4 py-2.5 text-xs font-bold text-text-primary hover:bg-[#F1F5F9] dark:hover:bg-slate-800/40 text-left transition-colors"
+              >
+                🌊 Spread Immediately
+              </button>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowSpreadMenu(false);
+                  setShowQuoteModal(true);
+                }}
+                className="flex w-full items-center px-4 py-2.5 text-xs font-bold text-text-primary hover:bg-[#F1F5F9] dark:hover:bg-slate-800/40 text-left transition-colors"
+              >
+                💭 Spread + Thoughts
+              </button>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Join comments form section */}
@@ -609,6 +769,74 @@ export const WaveCard: React.FC<WaveCardProps> = ({ wave, onRefresh }) => {
               className="rounded-full bg-[#0891B2] hover:bg-ocean px-5 py-2 text-xs font-bold text-white transition-all disabled:opacity-50"
             >
               {reportingWave ? 'Submitting...' : 'Submit Report'}
+            </button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* Quote Spread Modal */}
+      <Modal
+        open={showQuoteModal}
+        onClose={() => setShowQuoteModal(false)}
+        title="Spread + Thoughts"
+      >
+        <form onSubmit={handleQuoteSubmit} className="space-y-4">
+          <div className="rounded-2xl border border-card-border bg-background p-3">
+            <textarea
+              value={quoteThoughts}
+              onChange={(e) => setQuoteThoughts(e.target.value)}
+              rows={3}
+              maxLength={280}
+              className="w-full resize-none bg-transparent text-sm outline-none placeholder-slate-400 border-none focus:ring-0 text-text-primary"
+              placeholder="Share why you're spreading this Wave..."
+              required
+              disabled={submittingQuote}
+            />
+            <div className="text-right text-[10px] text-text-secondary font-semibold mt-1">
+              {quoteThoughts.length}/280
+            </div>
+          </div>
+
+          {/* Original Wave Preview (compact) */}
+          <div className="p-4 rounded-xl border border-card-border bg-slate-50/50 dark:bg-slate-900/40 text-left">
+            <div className="flex items-center gap-2 mb-1">
+              <div className="h-5 w-5 rounded-full bg-gradient-to-tr from-ocean to-aqua flex items-center justify-center text-white text-[8px] font-bold overflow-hidden shrink-0">
+                {activeWaveData.creator.avatar_url ? (
+                  <img src={activeWaveData.creator.avatar_url} alt="Avatar" className="h-full w-full object-cover" />
+                ) : (
+                  activeWaveData.creator.username[0].toUpperCase()
+                )}
+              </div>
+              <span className="text-xs font-bold text-text-primary">{activeWaveData.creator.full_name || activeWaveData.creator.username}</span>
+              <span className="text-[10px] text-text-secondary">@{activeWaveData.creator.username}</span>
+            </div>
+            <p className="text-xs text-text-primary line-clamp-3">{activeWaveData.content}</p>
+            {activeWaveData.media_url && (
+              <div className="mt-2 overflow-hidden rounded-lg border border-card-border max-h-20 w-32">
+                {activeWaveData.media_type === 'video' ? (
+                  <video src={activeWaveData.media_url} className="w-full h-full object-cover" />
+                ) : (
+                  <img src={activeWaveData.media_url} alt="Attachment preview" className="w-full h-full object-cover" />
+                )}
+              </div>
+            )}
+          </div>
+
+          <div className="flex justify-end gap-2 pt-2 border-t border-card-border">
+            <button
+              type="button"
+              disabled={submittingQuote}
+              onClick={() => setShowQuoteModal(false)}
+              className="rounded-full border border-card-border bg-card-bg px-4 py-2 text-xs font-bold text-text-primary hover:bg-[#F1F5F9] dark:hover:bg-slate-800/40 transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={submittingQuote || !quoteThoughts.trim()}
+              className="rounded-full bg-gradient-to-r from-ocean to-aqua px-5 py-2 text-xs font-bold text-white shadow-md shadow-aqua/10 hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-50"
+            >
+              {submittingQuote ? 'Spreading...' : 'Spread'}
             </button>
           </div>
         </form>

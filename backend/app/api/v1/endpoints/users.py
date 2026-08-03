@@ -6,7 +6,10 @@ from app.api.deps import get_current_active_user
 from app.core.database import get_db
 from app.core.exceptions import NotFoundException, BadRequestException
 from app.models.models import User, Wave, WaveRider, WaveAlert
-from app.schemas.schemas import UserResponse, UserUpdate
+from app.schemas.schemas import UserResponse, UserUpdate, ChangePasswordRequest, DeactivateAccountRequest
+from app.services.users import delete_user
+from app.core.redis import get_redis
+import redis
 
 router = APIRouter()
 
@@ -57,7 +60,7 @@ def get_profile(
     current_user: User = Depends(get_current_active_user)
 ):
     user = db.query(User).filter(User.username == username).first()
-    if not user:
+    if not user or getattr(user, "is_deactivated", False):
         raise NotFoundException(detail="Rider profile not found")
         
     # Get stats
@@ -168,25 +171,68 @@ def get_riding(
     ).filter(WaveRider.rider_id == user_id).all()
     return riding
 
-# Account Settings - Delete Account (Soft Delete)
+# Account Settings
+from app.core import security
+from datetime import datetime
+
+@router.post("/change-password", status_code=status.HTTP_200_OK)
+def change_password(
+    req: ChangePasswordRequest,
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db)
+):
+    if not security.verify_password(req.current_password, current_user.hashed_password):
+        raise BadRequestException(detail="Incorrect current password", code="PASSWORD_INCORRECT")
+    
+    if len(req.new_password) < 8:
+        raise BadRequestException(detail="New password must be at least 8 characters long", code="PASSWORD_TOO_SHORT")
+
+    current_user.hashed_password = security.get_password_hash(req.new_password)
+    db.commit()
+    return {"success": True, "message": "Password changed successfully."}
+
+@router.post("/deactivate", status_code=status.HTTP_200_OK)
+def deactivate_my_account(
+    req: DeactivateAccountRequest,
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db),
+    redis_client: redis.Redis = Depends(get_redis)
+):
+    if not security.verify_password(req.password, current_user.hashed_password):
+        raise BadRequestException(detail="Incorrect password confirmation", code="PASSWORD_INCORRECT")
+
+    current_user.is_deactivated = True
+    current_user.deactivated_at = datetime.utcnow()
+    db.commit()
+
+    # Immediately revoke all active refresh tokens in Redis
+    keys = redis_client.keys(f"refresh_token:{current_user.id}:*")
+    if keys:
+        redis_client.delete(*keys)
+
+    return {"success": True, "message": "Account successfully deactivated. Logging out."}
+
 class DeleteAccountRequest(BaseModel):
     password: str
-
-from app.core import security
 
 @router.delete("/me", status_code=status.HTTP_200_OK)
 def delete_my_account(
     req: DeleteAccountRequest,
     current_user: User = Depends(get_current_active_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    redis_client: redis.Redis = Depends(get_redis)
 ):
     # Verify password before deletion
     if not security.verify_password(req.password, current_user.hashed_password):
         raise BadRequestException(detail="Incorrect password confirmation", code="PASSWORD_INCORRECT")
 
-    # Soft delete: mark is_active=False
-    current_user.is_active = False
-    db.commit()
+    # Invalidate all active sessions/tokens in Redis first
+    keys = redis_client.keys(f"refresh_token:{current_user.id}:*")
+    if keys:
+        redis_client.delete(*keys)
 
-    return {"success": True, "message": "Account successfully deactivated. Logging out."}
+    # Modular deletion service method
+    delete_user(db, current_user)
+
+    return {"success": True, "message": "Account successfully deleted. Logging out."}
 

@@ -40,6 +40,13 @@ class UserUpdate(BaseModel):
     github_url: Optional[str] = None
     pinned_wave_id: Optional[str] = None
 
+class ChangePasswordRequest(BaseModel):
+    current_password: str
+    new_password: str
+
+class DeactivateAccountRequest(BaseModel):
+    password: str
+
 class UserResponse(UserBase):
     id: str
     avatar_url: Optional[str] = None
@@ -99,6 +106,7 @@ class WaveCreate(WaveBase):
     parent_wave_id: Optional[str] = None
     circle_id: Optional[str] = None
     poll: Optional[PollCreate] = None
+    spread_from_id: Optional[str] = None
 
 class WaveUpdate(BaseModel):
     content: Optional[str] = None
@@ -124,6 +132,8 @@ class WaveResponse(WaveBase):
     spread_by_me: bool = False
     bookmarked_by_me: bool = False
     poll: Optional[PollResponse] = None
+    updated_at: Optional[datetime] = None
+    is_edited: bool = False
 
     class Config:
         from_attributes = True

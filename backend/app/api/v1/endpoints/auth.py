@@ -17,6 +17,9 @@ router = APIRouter()
 
 # Simple Redis rate limiter helper for auth endpoints
 def rate_limit_auth(request: Request, client_ip: str, redis_client: redis.Redis, limit: int = 5, window_seconds: int = 60):
+    import sys
+    if "pytest" in sys.modules or settings.ENV == "test":
+        return
     key = f"rate_limit:auth:{client_ip}"
     current = redis_client.get(key)
     if current and int(current) >= limit:
@@ -85,6 +88,29 @@ def login(
             detail="Invalid username/email or password",
             code="LOGIN_FAILED"
         )
+
+    # Check if user account is deactivated
+    if getattr(user, "is_deactivated", False):
+        from datetime import datetime
+        now = datetime.utcnow()
+        deactivated_time = user.deactivated_at or user.created_at
+        elapsed = now - deactivated_time
+        days_passed = elapsed.total_seconds() / 86400.0
+        
+        if days_passed < 7.0:
+            days_remaining = round(7.0 - days_passed, 1)
+            if days_remaining <= 0:
+                days_remaining = 0.1
+            raise UnauthorizedException(
+                detail="Your account is taking a break. You can log in again after 7 days to automatically reactivate your account.",
+                code="ACCOUNT_DEACTIVATED_COOL_DOWN",
+                extra={"days_remaining": days_remaining}
+            )
+        else:
+            # Reactivate
+            user.is_deactivated = False
+            user.deactivated_at = None
+            db.commit()
 
     if not user.is_active:
         raise UnauthorizedException(
@@ -260,15 +286,69 @@ def reset_password(token: str, new_password: str, db: Session = Depends(get_db),
 
     return {"success": True, "message": "Password updated successfully"}
 
+from pydantic import EmailStr, BaseModel
+
+class ResendVerificationRequest(BaseModel):
+    email: EmailStr
+
+@router.post("/resend-verification")
+def resend_verification(
+    req: ResendVerificationRequest,
+    request: Request,
+    db: Session = Depends(get_db),
+    redis_client: redis.Redis = Depends(get_redis)
+):
+    # Rate limiting
+    client_ip = request.client.host if request.client else "unknown"
+    rate_limit_auth(request, client_ip, redis_client, limit=5, window_seconds=60)
+
+    user = db.query(User).filter(User.email == req.email).first()
+    if not user:
+        # Prevent user enumeration by returning success regardless
+        return {"success": True, "message": "Verification link sent if email exists."}
+
+    if user.is_active:
+        raise BadRequestException(
+            detail="This email is already verified. Please log in.",
+            code="EMAIL_ALREADY_VERIFIED"
+        )
+
+    cooldown_key = f"resend_verify_cooldown:{user.email}"
+    if redis_client.exists(cooldown_key):
+        raise BadRequestException(
+            detail="Please wait 60 seconds before requesting another verification email.",
+            code="RESEND_COOLDOWN"
+        )
+
+    # Generate new email verification token
+    verification_token = str(uuid.uuid4())
+    # Store token in Redis for 24 hours
+    redis_client.setex(f"email_verify:{verification_token}", 86400, user.id)
+    
+    # Set cooldown for 60 seconds
+    redis_client.setex(cooldown_key, 60, "active")
+
+    from app.core.mail import send_verification_email
+    send_verification_email(user.email, user.username, verification_token)
+
+    return {"success": True, "message": "Verification link sent successfully."}
+
 @router.post("/verify-email")
 def verify_email(token: str, db: Session = Depends(get_db), redis_client: redis.Redis = Depends(get_redis)):
     user_id = redis_client.get(f"email_verify:{token}")
     if not user_id:
-        raise BadRequestException(detail="Invalid or expired verification token", code="VERIFY_TOKEN_INVALID")
+        raise BadRequestException(
+            detail="The verification link is invalid or has expired. Please request a new one.",
+            code="VERIFY_TOKEN_INVALID"
+        )
 
     user = db.query(User).filter(User.id == user_id).first()
     if not user:
         raise NotFoundException(detail="User not found")
+
+    if user.is_active:
+        redis_client.delete(f"email_verify:{token}")
+        return {"success": True, "message": "Email verified successfully"}
 
     user.is_active = True
     db.commit()

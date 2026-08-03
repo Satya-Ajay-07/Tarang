@@ -56,6 +56,9 @@ class MockRedis:
         self.store[key] = value
         return True
 
+    def keys(self, pattern):
+        return [key for key in self.store.keys() if fnmatch.fnmatch(key, pattern)]
+
     def delete(self, *keys):
         count = 0
         for key in keys:

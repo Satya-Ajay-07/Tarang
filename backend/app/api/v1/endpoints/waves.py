@@ -43,7 +43,7 @@ def enrich_wave(wave: Wave, db: Session, current_user: User) -> WaveResponse:
     spread_from = None
     if wave.spread_from_id:
         parent = db.query(Wave).filter(Wave.id == wave.spread_from_id).first()
-        if parent:
+        if parent and getattr(parent, "is_active", True):
             spread_from = enrich_wave(parent, db, current_user)
 
     # Poll enrichment
@@ -83,6 +83,13 @@ def enrich_wave(wave: Wave, db: Session, current_user: User) -> WaveResponse:
             voted_option_id=my_vote.option_id if my_vote else None
         )
 
+    is_edited = False
+    if wave.updated_at and wave.created_at:
+        t1 = wave.updated_at.replace(tzinfo=None)
+        t2 = wave.created_at.replace(tzinfo=None)
+        if (t1 - t2).total_seconds() > 1.0:
+            is_edited = True
+
     return WaveResponse(
         id=wave.id,
         content=wave.content,
@@ -101,7 +108,9 @@ def enrich_wave(wave: Wave, db: Session, current_user: User) -> WaveResponse:
         rippled_by_me=rippled_by_me,
         spread_by_me=spread_by_me,
         bookmarked_by_me=bookmarked_by_me,
-        poll=poll_response
+        poll=poll_response,
+        updated_at=wave.updated_at,
+        is_edited=is_edited
     )
 
 # Create Wave (Post / Comment / Join)
@@ -123,14 +132,30 @@ def create_wave(
     pipe.expire(rate_key, 60)
     pipe.execute()
 
-    if not wave_in.content and not wave_in.media_url:
-        raise BadRequestException(detail="Wave must have either text content or media.")
+    if not wave_in.content and not wave_in.media_url and not wave_in.spread_from_id:
+        raise BadRequestException(detail="Wave must have either text content, media, or be a spread.")
 
     # Verify parent wave if exists (Join Wave)
     if wave_in.parent_wave_id:
         parent = db.query(Wave).filter(Wave.id == wave_in.parent_wave_id).first()
-        if not parent:
+        if not parent or not getattr(parent, "is_active", True):
             raise NotFoundException(detail="Parent wave not found")
+
+    target_spread_from_id = None
+    if wave_in.spread_from_id:
+        original = db.query(Wave).filter(Wave.id == wave_in.spread_from_id).first()
+        if not original or not getattr(original, "is_active", True):
+            raise BadRequestException(detail="Original Wave is no longer available.", code="ORIGINAL_WAVE_DELETED")
+        
+        # Rule: No nested Quote Spreads! Always reference root.
+        if original.spread_from_id:
+            root_original = db.query(Wave).filter(Wave.id == original.spread_from_id).first()
+            if root_original and getattr(root_original, "is_active", True):
+                target_spread_from_id = root_original.id
+            else:
+                raise BadRequestException(detail="Original Wave is no longer available.", code="ORIGINAL_WAVE_DELETED")
+        else:
+            target_spread_from_id = original.id
 
     new_wave = Wave(
         creator_id=current_user.id,
@@ -138,10 +163,25 @@ def create_wave(
         media_url=wave_in.media_url,
         media_type=wave_in.media_type,
         parent_wave_id=wave_in.parent_wave_id,
-        circle_id=wave_in.circle_id
+        circle_id=wave_in.circle_id,
+        spread_from_id=target_spread_from_id
     )
     db.add(new_wave)
     db.flush() # get new_wave.id before commit to link the poll
+
+    # Handle automatic hashtag extraction
+    if new_wave.content:
+        import re
+        from app.models.models import Hashtag
+        tags = re.findall(r"#(\w+)", new_wave.content)
+        unique_tags = list(set(tag.lower() for tag in tags))
+        for tag in unique_tags:
+            hashtag = db.query(Hashtag).filter(Hashtag.tag == tag).first()
+            if not hashtag:
+                hashtag = Hashtag(tag=tag)
+                db.add(hashtag)
+                db.flush()
+            new_wave.hashtags.append(hashtag)
 
     # Handle Poll attachment
     if wave_in.poll:
@@ -175,6 +215,26 @@ def create_wave(
         )
         db.add(alert)
         db.commit()
+
+    # If it is a Quote Spread, notify the root original creator
+    if target_spread_from_id:
+        root_wave = db.query(Wave).filter(Wave.id == target_spread_from_id).first()
+        if root_wave and root_wave.creator_id != current_user.id:
+            preview = ""
+            if wave_in.content:
+                truncated = wave_in.content[:60]
+                if len(wave_in.content) > 60:
+                    truncated += "..."
+                preview = f' "{truncated}"'
+            alert = WaveAlert(
+                recipient_id=root_wave.creator_id,
+                sender_id=current_user.id,
+                wave_id=new_wave.id,
+                type="spread",
+                content=f"{current_user.username} spread your Wave.{preview}"
+            )
+            db.add(alert)
+            db.commit()
 
     return enrich_wave(new_wave, db, current_user)
 
@@ -421,6 +481,20 @@ def update_wave(
 
     if wave_update.content is not None:
         wave.content = wave_update.content
+        # Update hashtags
+        wave.hashtags.clear()
+        import re
+        from app.models.models import Hashtag
+        tags = re.findall(r"#(\w+)", wave.content)
+        unique_tags = list(set(tag.lower() for tag in tags))
+        for tag in unique_tags:
+            hashtag = db.query(Hashtag).filter(Hashtag.tag == tag).first()
+            if not hashtag:
+                hashtag = Hashtag(tag=tag)
+                db.add(hashtag)
+                db.flush()
+            wave.hashtags.append(hashtag)
+
     if wave_update.media_url is not None:
         wave.media_url = wave_update.media_url
     if wave_update.media_type is not None:

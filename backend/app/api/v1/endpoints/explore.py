@@ -29,6 +29,7 @@ def suggested_riders(
     suggestions = (
         db.query(User)
         .filter(User.id.not_in(already_riding_ids))
+        .filter(User.is_deactivated == False)
         .limit(limit)
         .all()
     )
@@ -68,6 +69,7 @@ def search(
                 (User.username.ilike(f"%{q}%")) | (User.full_name.ilike(f"%{q}%"))
             )
             .filter(User.id != current_user.id)
+            .filter(User.is_deactivated == False)
             .offset(skip)
             .limit(limit)
             .all()

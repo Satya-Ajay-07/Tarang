@@ -15,6 +15,7 @@ interface AuthContextType {
   forgotPassword: (email: string) => Promise<void>;
   resetPassword: (token: string, newPassword: string) => Promise<void>;
   verifyEmail: (token: string) => Promise<void>;
+  resendVerification: (email: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -89,7 +90,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       if (!res.ok) {
         const errorData = await res.json();
-        throw new Error(errorData?.error?.message || 'Login failed');
+        const errorMsg = errorData?.error?.message || 'Login failed';
+        if (errorData?.error?.days_remaining !== undefined) {
+          const err: any = new Error(`${errorMsg} (Remaining: ${errorData.error.days_remaining} days)`);
+          err.days_remaining = errorData.error.days_remaining;
+          throw err;
+        }
+        throw new Error(errorMsg);
       }
 
       const data = await res.json();
@@ -194,8 +201,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const resendVerification = async (email: string) => {
+    const res = await apiRequest('/auth/resend-verification', {
+      method: 'POST',
+      body: JSON.stringify({ email }),
+      skipAuth: true
+    });
+    if (!res.ok) {
+      const errorData = await res.json();
+      const err: any = new Error(errorData?.error?.message || 'Failed to resend verification email');
+      err.code = errorData?.error?.code;
+      throw err;
+    }
+  };
+
   return (
-    <AuthContext.Provider value={{ user, loading, login, register, logout, forgotPassword, resetPassword, verifyEmail }}>
+    <AuthContext.Provider value={{ user, loading, login, register, logout, forgotPassword, resetPassword, verifyEmail, resendVerification }}>
       {children}
     </AuthContext.Provider>
   );

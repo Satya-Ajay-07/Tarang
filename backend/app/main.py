@@ -89,14 +89,18 @@ async def add_process_time_and_request_id(request: Request, call_next):
 # Exception handling middlewares
 @app.exception_handler(TarangException)
 async def tarang_exception_handler(request: Request, exc: TarangException):
+    error_content = {
+        "code": exc.code,
+        "message": exc.detail
+    }
+    if hasattr(exc, "extra") and exc.extra:
+        error_content.update(exc.extra)
+        
     return JSONResponse(
         status_code=exc.status_code,
         content={
             "success": False,
-            "error": {
-                "code": exc.code,
-                "message": exc.detail
-            }
+            "error": error_content
         }
     )
 @app.get("/cors-test")

@@ -1,20 +1,22 @@
 from fastapi import HTTPException, status
 
 class TarangException(HTTPException):
-    def __init__(self, status_code: int, detail: str, code: str = "ERROR"):
+    def __init__(self, status_code: int, detail: str, code: str = "ERROR", extra: dict = None):
         super().__init__(status_code=status_code, detail=detail)
         self.code = code
+        self.extra = extra or {}
 
 class NotFoundException(TarangException):
     def __init__(self, detail: str = "Resource not found", code: str = "NOT_FOUND"):
         super().__init__(status_code=status.HTTP_404_NOT_FOUND, detail=detail, code=code)
 
 class UnauthorizedException(TarangException):
-    def __init__(self, detail: str = "Could not authenticate user", code: str = "UNAUTHORIZED"):
+    def __init__(self, detail: str = "Could not authenticate user", code: str = "UNAUTHORIZED", extra: dict = None):
         super().__init__(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=detail,
-            code=code
+            code=code,
+            extra=extra
         )
 
 class ForbiddenException(TarangException):

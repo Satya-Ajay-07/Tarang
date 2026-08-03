@@ -31,6 +31,8 @@ class User(Base):
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     is_active = Column(Boolean, default=True)
     role = Column(String(50), default="user")
+    is_deactivated = Column(Boolean, default=False, nullable=False)
+    deactivated_at = Column(DateTime, nullable=True)
 
     # Relationships
     waves = relationship("Wave", back_populates="creator", foreign_keys="Wave.creator_id")
@@ -99,6 +101,7 @@ class Wave(Base):
     ripples = relationship("Ripple", back_populates="wave", cascade="all, delete-orphan")
     circle = relationship("WaveCircle", back_populates="waves")
     poll = relationship("Poll", back_populates="wave", uselist=False, cascade="all, delete-orphan")
+    hashtags = relationship("Hashtag", secondary="wave_hashtags", back_populates="waves")
 
 
 class Ripple(Base):
@@ -247,4 +250,20 @@ class Bookmark(Base):
     __table_args__ = (
         UniqueConstraint('user_id', 'wave_id', name='_user_wave_bookmark_uc'),
     )
+
+class Hashtag(Base):
+    __tablename__ = "hashtags"
+
+    id = Column(String(36), primary_key=True, default=generate_uuid)
+    tag = Column(String(100), unique=True, nullable=False, index=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    # Relationships
+    waves = relationship("Wave", secondary="wave_hashtags", back_populates="hashtags")
+
+class WaveHashtag(Base):
+    __tablename__ = "wave_hashtags"
+
+    wave_id = Column(String(36), ForeignKey("waves.id", ondelete="CASCADE"), primary_key=True)
+    hashtag_id = Column(String(36), ForeignKey("hashtags.id", ondelete="CASCADE"), primary_key=True)
 
