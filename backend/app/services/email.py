@@ -1,13 +1,12 @@
-import smtplib
 import time
 import logging
 import sys
-from email.mime.multipart import MIMEMultipart
-from email.mime.text import MIMEText
+import os
 from datetime import datetime
 from pathlib import Path
 from typing import Optional
 from jinja2 import Environment, FileSystemLoader
+import httpx
 
 from app.core.config import settings
 
@@ -49,55 +48,66 @@ class EmailService:
 
         # Attempt to send via configured provider
         if self.provider == "brevo":
-            return self._send_smtp_with_retries(to_email, subject, html_content, email_type)
+            return self._send_brevo_api_with_retries(to_email, subject, html_content, email_type)
         else:
             logger.error(f"Unsupported email provider: {self.provider}")
             return False
 
-    def _send_smtp_with_retries(self, to_email: str, subject: str, html_content: str, email_type: str) -> bool:
-        """Sends email using SMTP with up to 3 retries and exponential backoff."""
-        server_host = settings.SMTP_SERVER
-        server_port = settings.SMTP_PORT
-        smtp_user = settings.SMTP_EMAIL
-        smtp_password = settings.SMTP_PASSWORD
-        from_email = settings.FROM_EMAIL or smtp_user
+    def _send_brevo_api_with_retries(self, to_email: str, subject: str, html_content: str, email_type: str) -> bool:
+        """Sends email using Brevo's HTTPS REST API with up to 3 retries and exponential backoff."""
+        brevo_api_key = os.environ.get("BREVO_API_KEY") or getattr(settings, "BREVO_API_KEY", None)
+        from_email = settings.FROM_EMAIL or "onboarding@resend.dev"
 
-        if not server_host or not server_port or not smtp_user or not smtp_password:
-            logger.warning("SMTP configuration is incomplete. Email cannot be sent.")
-            # Trigger development fallback output to ensure tests capture the token
+        if not brevo_api_key:
+            logger.warning("BREVO_API_KEY is not configured. Email cannot be sent via REST API.")
             return False
+
+        url = "https://api.brevo.com/v3/smtp/email"
+        headers = {
+            "api-key": brevo_api_key,
+            "Content-Type": "application/json",
+            "Accept": "application/json"
+        }
+
+        payload = {
+            "sender": {
+                "name": "Tarang",
+                "email": from_email
+            },
+            "to": [
+                {
+                    "email": to_email
+                }
+            ],
+            "subject": subject,
+            "htmlContent": html_content
+        }
 
         max_retries = 3
         for attempt in range(1, max_retries + 1):
             try:
-                msg = MIMEMultipart("alternative")
-                msg["Subject"] = subject
-                msg["From"] = from_email
-                msg["To"] = to_email
-                msg.attach(MIMEText(html_content, "html"))
-
-                with smtplib.SMTP(server_host, server_port, timeout=10) as server:
-                    server.starttls()
-                    server.login(smtp_user, smtp_password)
-                    server.send_message(msg)
-
-                logger.info(
-                    f"Email sent successfully. recipient={to_email} email_type={email_type} "
-                    f"provider={self.provider} attempt={attempt}"
-                )
-                return True
+                response = httpx.post(url, headers=headers, json=payload, timeout=10.0)
+                if response.status_code in (200, 201, 202):
+                    logger.info(
+                        f"Email sent successfully via Brevo REST API. recipient={to_email} email_type={email_type} "
+                        f"provider={self.provider} attempt={attempt}"
+                    )
+                    return True
+                else:
+                    error_msg = f"Brevo API returned status code {response.status_code}: {response.text}"
+                    raise Exception(error_msg)
 
             except Exception as e:
                 wait_time = 2 ** attempt
                 logger.warning(
-                    f"SMTP send attempt {attempt} failed. recipient={to_email} email_type={email_type} "
+                    f"Brevo API send attempt {attempt} failed. recipient={to_email} email_type={email_type} "
                     f"provider={self.provider} error={str(e)}. Retrying in {wait_time}s..."
                 )
                 if attempt < max_retries:
                     time.sleep(wait_time)
                 else:
                     logger.error(
-                        f"SMTP delivery failed after {max_retries} attempts. recipient={to_email} "
+                        f"Brevo API delivery failed after {max_retries} attempts. recipient={to_email} "
                         f"email_type={email_type} provider={self.provider} error={str(e)}"
                     )
 
