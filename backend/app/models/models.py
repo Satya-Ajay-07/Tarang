@@ -267,4 +267,3 @@ class WaveHashtag(Base):
 
     wave_id = Column(String(36), ForeignKey("waves.id", ondelete="CASCADE"), primary_key=True)
     hashtag_id = Column(String(36), ForeignKey("hashtags.id", ondelete="CASCADE"), primary_key=True)
-
