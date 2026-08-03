@@ -9,6 +9,8 @@ def delete_user(db: Session, user: User) -> None:
     Future deletion strategies (hard delete, anonymisation, data export before deletion)
     can be plugged here without modifying API routes.
     """
+    # pyrefly: ignore [bad-assignment]
     user.is_deleted = True
+    # pyrefly: ignore [bad-assignment, deprecated]
     user.deleted_at = datetime.utcnow()
     db.commit()

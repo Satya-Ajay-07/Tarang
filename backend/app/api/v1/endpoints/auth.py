@@ -102,20 +102,30 @@ def register(user_in: UserCreate, request: Request, db: Session = Depends(get_db
     existing_users = db.query(User).filter((User.email == user_in.email) | (User.username == user_in.username)).all()
     
     if existing_users:
+        logger.info("Registration check: existing users found: %s", [u.username for u in existing_users])
         # Case 2: If any existing user with this email/username is NOT soft-deleted, block registration.
         non_deleted_users = [u for u in existing_users if not getattr(u, "is_deleted", False)]
         if non_deleted_users:
             raise BadRequestException(detail="Username or email already registered", code="EMAIL_ALREADY_EXISTS")
         
         # Case 3: All existing matches are deleted — purge their data so email/username is free to re-register.
-        # Use a single transaction; any failure rolls back completely.
         for old_user in existing_users:
             permanently_delete_user_data(db, old_user.id)
-        db.flush()
+            logger.info("Deleted user purged from database: ID=%s, Username=%s", old_user.id, old_user.username)
+        db.commit()
+        
+        # Verify no user with that email or username remains
+        remaining = db.query(User).filter((User.email == user_in.email) | (User.username == user_in.username)).all()
+        if remaining:
+            logger.error("Verification failed: duplicate users still remain: %s", [u.username for u in remaining])
+            raise BadRequestException(detail="Username or email already registered", code="EMAIL_ALREADY_EXISTS")
+        logger.info("Verification successful: all deleted duplicate users purged successfully.")
     
     # Hash password and create user
     hashed_password = security.get_password_hash(user_in.password)
+    new_uuid = str(uuid.uuid4())
     db_user = User(
+        id=new_uuid,
         email=user_in.email,
         username=user_in.username,
         full_name=user_in.full_name,
@@ -128,6 +138,7 @@ def register(user_in: UserCreate, request: Request, db: Session = Depends(get_db
     db.add(db_user)
     db.commit()
     db.refresh(db_user)
+    logger.info("New user created successfully: ID=%s, Username=%s, Email=%s", db_user.id, db_user.username, db_user.email)
 
     # Generate email verification token
     verification_token = str(uuid.uuid4())
