@@ -69,7 +69,7 @@ export default function SavedPage() {
               <div className="text-4xl">🔖</div>
               <h3 className="text-sm font-bold text-text-secondary">No bookmarks saved</h3>
               <p className="text-xs text-text-muted max-w-xs mx-auto">
-                Save waves to reference them later. Bookmarked waves will appear here.
+                The waves you save will wash ashore here.
               </p>
             </div>
           ) : (
