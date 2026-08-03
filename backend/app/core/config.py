@@ -1,5 +1,4 @@
-from pydantic_settings import BaseSettings
-from pydantic import ConfigDict
+from pydantic_settings import BaseSettings, SettingsConfigDict
 from typing import Optional, List
 
 class Settings(BaseSettings):
@@ -19,6 +18,8 @@ class Settings(BaseSettings):
     CLOUDINARY_API_KEY: Optional[str] = None
     CLOUDINARY_API_SECRET: Optional[str] = None
 
+    EMAIL_ENABLED: bool = True
+    EMAIL_PROVIDER: str = "brevo"
     SMTP_SERVER: Optional[str] = None
     SMTP_PORT: Optional[int] = None
     SMTP_EMAIL: Optional[str] = None
@@ -32,7 +33,7 @@ class Settings(BaseSettings):
     MAIL_FROM: str = "onboarding@resend.dev"
 
 
-    model_config = ConfigDict(
+    model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",
         extra="ignore"

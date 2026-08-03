@@ -1,0 +1,15 @@
+{% extends "emails/base.html" %}
+
+{% block title %}Welcome to Tarang! 🌊{% endblock %}
+
+{% block content %}
+<h1>Welcome to Tarang, @{{ username }}!</h1>
+<p>Your account has been verified successfully.</p>
+<p>You can now:</p>
+<p>🌊 Create Waves<br>
+💬 Join conversations<br>
+🔖 Bookmark Waves</p>
+<div class="btn-container">
+    <a href="{{ login_url }}" class="btn">Start Exploring Tarang</a>
+</div>
+{% endblock %}

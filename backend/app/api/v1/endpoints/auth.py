@@ -7,11 +7,15 @@ from app.core.database import get_db
 from app.core.redis import get_redis
 from app.core.config import settings
 from app.core import security
-from app.core.exceptions import BadRequestException, UnauthorizedException, NotFoundException
+from app.core.exceptions import BadRequestException, UnauthorizedException, NotFoundException, EmailDeliveryException
 from app.models.models import User
-from app.schemas.schemas import UserCreate, UserLogin, UserResponse, Token
+from app.schemas.schemas import UserCreate, UserLogin, UserResponse, Token, RegisterResponse
+from app.services.email import email_service
 from fastapi.responses import JSONResponse, RedirectResponse
 import redis
+import logging
+
+logger = logging.getLogger("app.api.auth")
 
 router = APIRouter()
 
@@ -30,7 +34,7 @@ def rate_limit_auth(request: Request, client_ip: str, redis_client: redis.Redis,
     pipe.expire(key, window_seconds)
     pipe.execute()
 
-@router.post("/register", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
+@router.post("/register", response_model=RegisterResponse, status_code=status.HTTP_201_CREATED)
 def register(user_in: UserCreate, request: Request, db: Session = Depends(get_db), redis_client: redis.Redis = Depends(get_redis)):
     # Rate limiting
     client_ip = request.client.host if request.client else "unknown"
@@ -62,10 +66,39 @@ def register(user_in: UserCreate, request: Request, db: Session = Depends(get_db
     # Store token in Redis for 24 hours
     redis_client.setex(f"email_verify:{verification_token}", 86400, db_user.id)
     
-    from app.core.mail import send_verification_email
-    send_verification_email(db_user.email, db_user.username, verification_token)
+    warning = None
+    try:
+        from app.core.mail import send_verification_email
+        success = send_verification_email(db_user.email, db_user.username, verification_token)
+        if not success:
+            warning = "Account created successfully, but verification email could not be delivered at this time."
+    except Exception as e:
+        logger.error(f"Error sending verification email during registration: {str(e)}")
+        warning = "Account created successfully, but verification email could not be delivered at this time."
 
-    return db_user
+    user_response = UserResponse.model_validate(db_user)
+    return RegisterResponse(
+        success=True,
+        user=user_response,
+        warning=warning,
+        # Flattened fields for backwards compatibility with existing tests
+        id=db_user.id,
+        email=db_user.email,
+        username=db_user.username,
+        full_name=db_user.full_name,
+        country=db_user.country,
+        avatar_url=db_user.avatar_url,
+        cover_url=db_user.cover_url,
+        bio=db_user.bio,
+        location=db_user.location,
+        created_at=db_user.created_at,
+        role=db_user.role,
+        phone_number=db_user.phone_number,
+        website=db_user.website,
+        twitter_url=db_user.twitter_url,
+        github_url=db_user.github_url,
+        pinned_wave_id=db_user.pinned_wave_id
+    )
 
 @router.post("/login")
 def login(
@@ -257,8 +290,10 @@ def forgot_password(email: str, request: Request, db: Session = Depends(get_db),
     # Save token in redis with 2 hours expiry
     redis_client.setex(f"password_reset:{reset_token}", 7200, user.id)
 
-    # Log simulated mail send
-    print(f"[MAIL MOCK] Password Reset link for {user.email}: http://localhost:3000/reset-password?token={reset_token}")
+    # Send password reset email
+    success = email_service.send_password_reset_email(user.email, user.username, reset_token)
+    if not success:
+        raise EmailDeliveryException(detail="Failed to send password reset email. Please try again later.")
 
     return {"success": True, "message": "Password reset instructions sent if email exists."}
 
@@ -329,7 +364,9 @@ def resend_verification(
     redis_client.setex(cooldown_key, 60, "active")
 
     from app.core.mail import send_verification_email
-    send_verification_email(user.email, user.username, verification_token)
+    success = send_verification_email(user.email, user.username, verification_token)
+    if not success:
+        raise EmailDeliveryException(detail="Failed to send verification email. Please try again later.")
 
     return {"success": True, "message": "Verification link sent successfully."}
 
@@ -355,5 +392,11 @@ def verify_email(token: str, db: Session = Depends(get_db), redis_client: redis.
 
     # Revoke verification token
     redis_client.delete(f"email_verify:{token}")
+
+    # Automatically send welcome email
+    try:
+        email_service.send_welcome_email(user.email, user.username)
+    except Exception as e:
+        logger.error(f"Failed to send welcome email to {user.email}: {str(e)}")
 
     return {"success": True, "message": "Email verified successfully"}

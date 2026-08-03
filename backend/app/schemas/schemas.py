@@ -64,6 +64,33 @@ class UserResponse(UserBase):
     class Config:
         from_attributes = True
 
+class RegisterResponse(BaseModel):
+    success: bool
+    user: UserResponse
+    warning: Optional[str] = None
+
+    # Flattened fields for backwards compatibility with tests and clients
+    id: str
+    email: EmailStr
+    username: str
+    full_name: Optional[str] = None
+    country: Optional[str] = None
+    avatar_url: Optional[str] = None
+    cover_url: Optional[str] = None
+    bio: Optional[str] = None
+    location: Optional[str] = None
+    created_at: datetime
+    role: str
+    phone_number: Optional[str] = None
+    website: Optional[str] = None
+    twitter_url: Optional[str] = None
+    github_url: Optional[str] = None
+    pinned_wave_id: Optional[str] = None
+
+    class Config:
+        from_attributes = True
+
+
 
 # --- Poll Schemas ---
 class PollOptionCreate(BaseModel):

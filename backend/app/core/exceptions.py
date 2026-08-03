@@ -26,3 +26,7 @@ class ForbiddenException(TarangException):
 class BadRequestException(TarangException):
     def __init__(self, detail: str = "Bad request parameters", code: str = "BAD_REQUEST"):
         super().__init__(status_code=status.HTTP_400_BAD_REQUEST, detail=detail, code=code)
+
+class EmailDeliveryException(BadRequestException):
+    def __init__(self, detail: str = "Failed to send email. Please try again later.", code: str = "EMAIL_DELIVERY_FAILED"):
+        super().__init__(detail=detail, code=code)

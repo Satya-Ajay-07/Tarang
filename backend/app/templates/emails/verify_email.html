@@ -1,0 +1,15 @@
+{% extends "emails/base.html" %}
+
+{% block title %}Verify your Tarang Account{% endblock %}
+
+{% block content %}
+<h1>Welcome to the Wave Circle, @{{ username }}!</h1>
+<p>Every Voice Creates a Wave. To activate your account and start sharing, please verify your email address by clicking the button below. This link expires in 24 hours.</p>
+<div class="btn-container">
+    <a href="{{ verification_url }}" class="btn">Verify Account</a>
+</div>
+<div class="link-container">
+    If the button doesn't work, copy and paste this URL into your browser:<br>
+    <a href="{{ verification_url }}">{{ verification_url }}</a>
+</div>
+{% endblock %}

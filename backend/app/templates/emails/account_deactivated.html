@@ -1,0 +1,8 @@
+{% extends "emails/base.html" %}
+
+{% block title %}Account Deactivation{% endblock %}
+
+{% block content %}
+<h1>Your account has been deactivated</h1>
+<p>Hello @{{ username }}, your Tarang account has been deactivated as requested. Your data will be kept on hold for 7 days. If you log back in during this period, your account will be automatically reactivated.</p>
+{% endblock %}
