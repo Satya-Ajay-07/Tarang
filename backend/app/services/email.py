@@ -1,6 +1,7 @@
 import smtplib
 import time
 import logging
+import sys
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from datetime import datetime
@@ -110,7 +111,7 @@ class EmailService:
             "username": username,
             "verification_url": verification_url
         }
-        if settings.ENV == "test":
+        if "pytest" in sys.modules or settings.ENV == "test":
             print(f"[MAIL FALLBACK] {verification_url}")
             return True
 
@@ -131,7 +132,7 @@ class EmailService:
             "username": username,
             "reset_url": reset_url
         }
-        if settings.ENV == "test":
+        if "pytest" in sys.modules or settings.ENV == "test":
             print(f"[MAIL MOCK] Password Reset link for {email}: {reset_url}")
             return True
 
@@ -147,7 +148,7 @@ class EmailService:
             "username": username,
             "login_url": login_url
         }
-        if settings.ENV == "test":
+        if "pytest" in sys.modules or settings.ENV == "test":
             return True
         return self.send(email, subject, "emails/welcome.html", context, email_type="welcome")
 
@@ -156,7 +157,7 @@ class EmailService:
         context = {
             "username": username
         }
-        if settings.ENV == "test":
+        if "pytest" in sys.modules or settings.ENV == "test":
             return True
         return self.send(email, subject, "emails/account_deactivated.html", context, email_type="deactivation")
 

@@ -146,8 +146,9 @@ def test_account_management_flow(capsys):
     )
     assert del_resp.status_code == 200
     
-    # In soft-delete service, user.is_active is False
+    # is_deleted is now set to True by delete_user(); is_active is NOT touched.
     db.refresh(user_db)
-    assert user_db.is_active is False
+    assert user_db.is_deleted is True
+    assert user_db.deleted_at is not None
 
     db.close()

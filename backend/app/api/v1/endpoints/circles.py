@@ -36,7 +36,7 @@ def enrich_circle(circle: WaveCircle, db: Session, current_user: User) -> WaveCi
         created_at=circle.created_at,
         members_count=members_count,
         joined_by_me=joined_by_me,
-        is_public=circle.is_public if hasattr(circle, "is_public") else True,
+        is_public=bool(circle.is_public),
     )
 
 

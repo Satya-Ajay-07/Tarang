@@ -26,9 +26,11 @@ def get_current_user(token: str = Depends(get_token_from_header), db: Session = 
     return user
 
 def get_current_active_user(current_user: User = Depends(get_current_user)) -> User:
+    if bool(current_user.is_deleted):
+        raise UnauthorizedException(detail="This account has been deleted", code="ACCOUNT_DELETED")
     if not current_user.is_active:
         raise UnauthorizedException(detail="Inactive user", code="USER_INACTIVE")
-    if getattr(current_user, "is_deactivated", False):
+    if bool(current_user.is_deactivated):
         raise UnauthorizedException(detail="Account is deactivated", code="USER_DEACTIVATED")
     return current_user
 

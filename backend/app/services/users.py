@@ -1,12 +1,14 @@
+from datetime import datetime
 from sqlalchemy.orm import Session
 from app.models.models import User
 
 def delete_user(db: Session, user: User) -> None:
     """
-    Modular deletion service method to isolate account deletion behavior.
-    Currently implements the existing soft-delete (setting is_active = False).
-    Future deletion strategies (hard delete, anonymization, archival)
+    Marks the account as permanently deleted using the dedicated is_deleted flag.
+    is_active is NOT modified here — it represents email verification state only.
+    Future deletion strategies (hard delete, anonymisation, data export before deletion)
     can be plugged here without modifying API routes.
     """
-    user.is_active = False
+    user.is_deleted = True
+    user.deleted_at = datetime.utcnow()
     db.commit()

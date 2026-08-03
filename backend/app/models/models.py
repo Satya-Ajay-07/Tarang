@@ -1,10 +1,9 @@
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from sqlalchemy import Column, String, Boolean, DateTime, ForeignKey, Text, Table, Index, UniqueConstraint
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 from app.core.database import Base
-from datetime import datetime, timezone
 # Helper function to generate UUIDs
 def generate_uuid():
     return str(uuid.uuid4())
@@ -29,10 +28,12 @@ class User(Base):
     pinned_wave_id = Column(String(36), nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-    is_active = Column(Boolean, default=True)
+    is_active = Column(Boolean, default=True)   # Email verification status ONLY
     role = Column(String(50), default="user")
-    is_deactivated = Column(Boolean, default=False, nullable=False)
+    is_deactivated = Column(Boolean, default=False, nullable=False)  # Temporary deactivation
     deactivated_at = Column(DateTime, nullable=True)
+    is_deleted = Column(Boolean, default=False, nullable=False)      # Permanent deletion
+    deleted_at = Column(DateTime, nullable=True)
 
     # Relationships
     waves = relationship("Wave", back_populates="creator", foreign_keys="Wave.creator_id")

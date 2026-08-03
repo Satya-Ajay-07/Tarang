@@ -4,6 +4,7 @@ from sqlalchemy import func
 from typing import List, Optional
 import redis
 import json
+import logging
 from app.api.deps import get_current_active_user
 from app.core.database import get_db
 from app.core.redis import get_redis
@@ -12,6 +13,7 @@ from app.core.exceptions import NotFoundException, BadRequestException, Forbidde
 from app.models.models import User, Wave, Ripple, WaveAlert, WaveRider, Poll, PollOption, PollVote, Bookmark
 from app.schemas.schemas import WaveCreate, WaveResponse, WaveUpdate, PollResponse, PollOptionResponse
 
+logger = logging.getLogger("tarang")
 router = APIRouter()
 
 # Helper to enrich wave database models into WaveResponse schemas
@@ -39,11 +41,11 @@ def enrich_wave(wave: Wave, db: Session, current_user: User) -> WaveResponse:
         Bookmark.wave_id == wave.id
     ).first() is not None
 
-    # Spread Wave resolution
+    # Spread Wave resolution — only include if the referenced wave still exists
     spread_from = None
     if wave.spread_from_id:
         parent = db.query(Wave).filter(Wave.id == wave.spread_from_id).first()
-        if parent and getattr(parent, "is_active", True):
+        if parent is not None:
             spread_from = enrich_wave(parent, db, current_user)
 
     # Poll enrichment
@@ -205,16 +207,19 @@ def create_wave(
     db.refresh(new_wave)
 
     # If it is a Join Wave, notify the parent creator
-    if wave_in.parent_wave_id and parent.creator_id != current_user.id:
-        alert = WaveAlert(
-            recipient_id=parent.creator_id,
-            sender_id=current_user.id,
-            wave_id=new_wave.id,
-            type="join",
-            content=f"{current_user.username} joined your Wave"
-        )
-        db.add(alert)
-        db.commit()
+    if wave_in.parent_wave_id:
+        # Re-query parent after commit to ensure it's within the current session
+        parent = db.query(Wave).filter(Wave.id == wave_in.parent_wave_id).first()
+        if parent and parent.creator_id != current_user.id:
+            alert = WaveAlert(
+                recipient_id=parent.creator_id,
+                sender_id=current_user.id,
+                wave_id=new_wave.id,
+                type="join",
+                content=f"{current_user.username} joined your Wave"
+            )
+            db.add(alert)
+            db.commit()
 
     # If it is a Quote Spread, notify the root original creator
     if target_spread_from_id:
@@ -580,62 +585,6 @@ def report_wave(
         raise NotFoundException(detail="Wave not found")
     
     reason = payload.get("reason", "Other")
-    print(f"[Tarang Report] User {current_user.username} reported Wave {wave_id} for: {reason}")
+    logger.info("Wave report: user=%s wave=%s reason=%s", current_user.username, wave_id, reason)
     return {"message": "Wave reported successfully", "wave_id": wave_id, "reason": reason}
-
-# Retrieve bookmarked waves
-@router.get("/bookmarks", response_model=List[WaveResponse])
-def get_bookmarks(
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
-):
-    bookmarks = db.query(Bookmark).filter(Bookmark.user_id == current_user.id).order_by(Bookmark.created_at.desc()).all()
-    wave_ids = [b.wave_id for b in bookmarks]
-    waves = db.query(Wave).filter(Wave.id.in_(wave_ids)).all()
-    # Preserve order
-    wave_map = {w.id: w for w in waves}
-    ordered_waves = [wave_map[wid] for wid in wave_ids if wid in wave_map]
-    return [enrich_wave(w, db, current_user) for w in ordered_waves]
-
-# Add a bookmark
-@router.post("/{wave_id}/bookmark")
-def add_bookmark(
-    wave_id: str,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
-):
-    wave = db.query(Wave).filter(Wave.id == wave_id).first()
-    if not wave:
-        raise NotFoundException(detail="Wave not found")
-        
-    existing_bookmark = db.query(Bookmark).filter(
-        Bookmark.user_id == current_user.id,
-        Bookmark.wave_id == wave_id
-    ).first()
-    if existing_bookmark:
-        return {"message": "Wave already bookmarked", "bookmarked": True}
-        
-    new_bookmark = Bookmark(user_id=current_user.id, wave_id=wave_id)
-    db.add(new_bookmark)
-    db.commit()
-    return {"message": "Wave bookmarked successfully", "bookmarked": True}
-
-# Delete a bookmark
-@router.delete("/{wave_id}/bookmark")
-def delete_bookmark(
-    wave_id: str,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
-):
-    bookmark = db.query(Bookmark).filter(
-        Bookmark.user_id == current_user.id,
-        Bookmark.wave_id == wave_id
-    ).first()
-    if not bookmark:
-        raise NotFoundException(detail="Bookmark not found")
-        
-    db.delete(bookmark)
-    db.commit()
-    return {"message": "Bookmark removed successfully", "bookmarked": False}
-
 

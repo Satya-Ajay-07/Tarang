@@ -1,4 +1,4 @@
-from datetime import timedelta
+from datetime import datetime, timedelta
 import uuid
 from typing import Optional
 from fastapi import APIRouter, Depends, Response, Request, status, Cookie
@@ -11,7 +11,7 @@ from app.core.exceptions import BadRequestException, UnauthorizedException, NotF
 from app.models.models import User
 from app.schemas.schemas import UserCreate, UserLogin, UserResponse, Token, RegisterResponse
 from app.services.email import email_service
-from fastapi.responses import JSONResponse, RedirectResponse
+from fastapi.responses import JSONResponse
 import redis
 import logging
 
@@ -34,6 +34,64 @@ def rate_limit_auth(request: Request, client_ip: str, redis_client: redis.Redis,
     pipe.expire(key, window_seconds)
     pipe.execute()
 
+def permanently_delete_user_data(db: Session, user_id: str) -> None:
+    from app.models.models import User, Wave, Ripple, CircleMember, WaveRider, Message, WaveAlert, PollVote, Bookmark, WaveCircle, Poll, PollOption, WaveHashtag
+    
+    # 1. Get all wave IDs created by this user
+    wave_ids = [w.id for w in db.query(Wave.id).filter(Wave.creator_id == user_id).all()]
+    
+    if wave_ids:
+        # Delete wave hashtags of these waves
+        db.query(WaveHashtag).filter(WaveHashtag.wave_id.in_(wave_ids)).delete(synchronize_session=False)
+        # Delete bookmarks of these waves
+        db.query(Bookmark).filter(Bookmark.wave_id.in_(wave_ids)).delete(synchronize_session=False)
+        # Delete ripples of these waves
+        db.query(Ripple).filter(Ripple.wave_id.in_(wave_ids)).delete(synchronize_session=False)
+        
+        # Get poll IDs for these waves
+        poll_ids = [p.id for p in db.query(Poll.id).filter(Poll.wave_id.in_(wave_ids)).all()]
+        if poll_ids:
+            # Delete poll votes of these polls
+            db.query(PollVote).filter(PollVote.poll_id.in_(poll_ids)).delete(synchronize_session=False)
+            # Delete poll options of these polls
+            db.query(PollOption).filter(PollOption.poll_id.in_(poll_ids)).delete(synchronize_session=False)
+            # Delete polls of these waves
+            db.query(Poll).filter(Poll.wave_id.in_(wave_ids)).delete(synchronize_session=False)
+            
+        # Delete alerts referencing these waves
+        db.query(WaveAlert).filter(WaveAlert.wave_id.in_(wave_ids)).delete(synchronize_session=False)
+        # Delete replies/comments to these waves
+        db.query(Wave).filter(Wave.parent_wave_id.in_(wave_ids)).delete(synchronize_session=False)
+        # Delete the waves themselves
+        db.query(Wave).filter(Wave.creator_id == user_id).delete(synchronize_session=False)
+
+    # 2. Ripples created by user
+    db.query(Ripple).filter(Ripple.user_id == user_id).delete(synchronize_session=False)
+    
+    # 3. Circle Member
+    db.query(CircleMember).filter(CircleMember.user_id == user_id).delete(synchronize_session=False)
+    
+    # 4. Followers / Followed (WaveRider)
+    db.query(WaveRider).filter((WaveRider.rider_id == user_id) | (WaveRider.rider_of_id == user_id)).delete(synchronize_session=False)
+    
+    # 5. Direct Messages
+    db.query(Message).filter((Message.sender_id == user_id) | (Message.recipient_id == user_id)).delete(synchronize_session=False)
+    
+    # 6. Wave Alerts
+    db.query(WaveAlert).filter((WaveAlert.recipient_id == user_id) | (WaveAlert.sender_id == user_id)).delete(synchronize_session=False)
+    
+    # 7. Poll Votes
+    db.query(PollVote).filter(PollVote.user_id == user_id).delete(synchronize_session=False)
+    
+    # 8. Bookmarks
+    db.query(Bookmark).filter(Bookmark.user_id == user_id).delete(synchronize_session=False)
+    
+    # 9. Set creator_id in WaveCircle to NULL
+    db.query(WaveCircle).filter(WaveCircle.creator_id == user_id).update({WaveCircle.creator_id: None}, synchronize_session=False)
+    
+    # 10. Delete the user
+    db.query(User).filter(User.id == user_id).delete(synchronize_session=False)
+
 @router.post("/register", response_model=RegisterResponse, status_code=status.HTTP_201_CREATED)
 def register(user_in: UserCreate, request: Request, db: Session = Depends(get_db), redis_client: redis.Redis = Depends(get_redis)):
     # Rate limiting
@@ -41,9 +99,19 @@ def register(user_in: UserCreate, request: Request, db: Session = Depends(get_db
     rate_limit_auth(request, client_ip, redis_client, limit=10, window_seconds=60)
 
     # Check unique constraints
-    user_exists = db.query(User).filter((User.email == user_in.email) | (User.username == user_in.username)).first()
-    if user_exists:
-        raise BadRequestException(detail="Username or email already registered", code="REGISTRATION_FAILED")
+    existing_users = db.query(User).filter((User.email == user_in.email) | (User.username == user_in.username)).all()
+    
+    if existing_users:
+        # Case 2: If any existing user with this email/username is NOT soft-deleted, block registration.
+        non_deleted_users = [u for u in existing_users if not getattr(u, "is_deleted", False)]
+        if non_deleted_users:
+            raise BadRequestException(detail="Username or email already registered", code="EMAIL_ALREADY_EXISTS")
+        
+        # Case 3: All existing matches are deleted — purge their data so email/username is free to re-register.
+        # Use a single transaction; any failure rolls back completely.
+        for old_user in existing_users:
+            permanently_delete_user_data(db, old_user.id)
+        db.flush()
     
     # Hash password and create user
     hashed_password = security.get_password_hash(user_in.password)
@@ -122,11 +190,17 @@ def login(
             code="LOGIN_FAILED"
         )
 
-    # Check if user account is deactivated
-    if getattr(user, "is_deactivated", False):
-        from datetime import datetime
+    # Step 3: Check deletion — deleted accounts cannot log in at all.
+    if bool(user.is_deleted):
+        raise UnauthorizedException(
+            detail="This account has been permanently deleted.",
+            code="ACCOUNT_DELETED"
+        )
+
+    # Step 4: Check deactivation (temporary) with 7-day cooldown.
+    if bool(user.is_deactivated):
         now = datetime.utcnow()
-        deactivated_time = user.deactivated_at or user.created_at
+        deactivated_time: datetime = user.deactivated_at or user.created_at  # type: ignore[assignment]
         elapsed = now - deactivated_time
         days_passed = elapsed.total_seconds() / 86400.0
         
@@ -140,11 +214,12 @@ def login(
                 extra={"days_remaining": days_remaining}
             )
         else:
-            # Reactivate
+            # Auto-reactivate after 7 days
             user.is_deactivated = False
             user.deactivated_at = None
             db.commit()
 
+    # Step 5: Check email verification.
     if not user.is_active:
         raise UnauthorizedException(
             detail="Please verify your email first.",
@@ -186,26 +261,15 @@ def refresh_token(
     redis_client: redis.Redis = Depends(get_redis),
     db: Session = Depends(get_db),
 ):
-    print("=" * 60)
-    print("REFRESH ENDPOINT CALLED")
+    logger.debug("Refresh endpoint called")
 
     refresh_token = None
 
-    print("=" * 60)
-    print("ALL HEADERS")
-
-    for k, v in request.headers.items():
-        print(k, ":", v)
-
-    print("=" * 60)
-
     auth = request.headers.get("authorization")
-    print("Authorization Header:", auth)
+    logger.debug("Authorization header present: %s", auth is not None)
 
     if auth and auth.startswith("Bearer "):
         refresh_token = auth.split(" ")[1]
-
-    print("Refresh Token:", refresh_token)
 
     if not refresh_token:
         raise UnauthorizedException(
@@ -214,7 +278,6 @@ def refresh_token(
         )
 
     payload = security.decode_token(refresh_token)
-    print("Decoded Payload:", payload)
 
     if not payload or payload.get("type") != "refresh":
         raise UnauthorizedException(
@@ -228,8 +291,6 @@ def refresh_token(
         f"refresh_token:{user_id}:{refresh_token}"
     )
 
-    print("Redis Status:", token_status)
-
     if not token_status:
         raise UnauthorizedException(
             detail="Refresh token revoked",
@@ -237,6 +298,11 @@ def refresh_token(
         )
 
     user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise UnauthorizedException(
+            detail="User not found",
+            code="USER_NOT_FOUND"
+        )
 
     new_access = security.create_access_token(user.id)
     new_refresh = security.create_refresh_token(user.id)
@@ -251,7 +317,7 @@ def refresh_token(
         "active"
     )
 
-    print("Refresh Successful")
+    logger.debug("Token refresh successful for user %s", user_id)
 
     return Token(
         access_token=new_access,
@@ -284,6 +350,13 @@ def forgot_password(email: str, request: Request, db: Session = Depends(get_db),
     if not user:
         # Prevent user enumeration by returning success regardless
         return {"success": True, "message": "Password reset instructions sent if email exists."}
+
+    # Deleted accounts cannot reset passwords
+    if getattr(user, "is_deleted", False):
+        raise BadRequestException(
+            detail="This account has been permanently deleted and cannot reset its password.",
+            code="ACCOUNT_DELETED"
+        )
 
     # Generate reset token
     reset_token = str(uuid.uuid4())

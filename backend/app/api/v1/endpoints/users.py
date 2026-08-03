@@ -60,7 +60,7 @@ def get_profile(
     current_user: User = Depends(get_current_active_user)
 ):
     user = db.query(User).filter(User.username == username).first()
-    if not user or getattr(user, "is_deactivated", False):
+    if not user or getattr(user, "is_deactivated", False) or getattr(user, "is_deleted", False):
         raise NotFoundException(detail="Rider profile not found")
         
     # Get stats
