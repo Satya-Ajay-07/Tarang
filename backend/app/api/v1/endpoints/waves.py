@@ -1,7 +1,8 @@
 from fastapi import APIRouter, Depends, status, Query
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload, selectinload
 from sqlalchemy import func
 from typing import List, Optional
+import time
 import redis
 import json
 import logging
@@ -17,103 +18,142 @@ logger = logging.getLogger("tarang")
 router = APIRouter()
 
 # Helper to enrich wave database models into WaveResponse schemas
+# Helper to enrich wave database models into WaveResponse schemas in bulk
+def enrich_waves_bulk(waves: List[Wave], db: Session, current_user: User, recursive: bool = True) -> List[WaveResponse]:
+    if not waves:
+        return []
+
+    # 1. Fetch spread_from waves in one query (if recursive is True)
+    parent_map = {}
+    if recursive:
+        parent_ids = list(set([w.spread_from_id for w in waves if w.spread_from_id]))
+        if parent_ids:
+            parent_waves = db.query(Wave).options(
+                joinedload(Wave.creator),
+                joinedload(Wave.poll),
+                selectinload(Wave.hashtags)
+            ).filter(Wave.id.in_(parent_ids)).all()
+            
+            # Enrich parent waves once (with recursive=False to avoid nested recursion)
+            enriched_parents = enrich_waves_bulk(parent_waves, db, current_user, recursive=False)
+            parent_map = {pw.id: pw for pw in enriched_parents}
+
+    # 2. Collect all wave IDs (main + parent waves)
+    all_wave_ids = list(set([w.id for w in waves] + list(parent_map.keys())))
+
+    # 3. Fetch counts in batches
+    ripples_counts = db.query(Ripple.wave_id, func.count(Ripple.user_id)).filter(Ripple.wave_id.in_(all_wave_ids)).group_by(Ripple.wave_id).all()
+    ripples_map = {w_id: count for w_id, count in ripples_counts}
+
+    joins_counts = db.query(Wave.parent_wave_id, func.count(Wave.id)).filter(Wave.parent_wave_id.in_(all_wave_ids)).group_by(Wave.parent_wave_id).all()
+    joins_map = {w_id: count for w_id, count in joins_counts}
+
+    spreads_counts = db.query(Wave.spread_from_id, func.count(Wave.id)).filter(Wave.spread_from_id.in_(all_wave_ids)).group_by(Wave.spread_from_id).all()
+    spreads_map = {w_id: count for w_id, count in spreads_counts}
+
+    # 4. Fetch user-specific statuses in batches
+    rippled_by_me_raw = db.query(Ripple.wave_id).filter(Ripple.wave_id.in_(all_wave_ids), Ripple.user_id == current_user.id).all()
+    rippled_set = {r[0] for r in rippled_by_me_raw}
+
+    spread_by_me_raw = db.query(Wave.spread_from_id).filter(Wave.spread_from_id.in_(all_wave_ids), Wave.creator_id == current_user.id).all()
+    spread_set = {s[0] for s in spread_by_me_raw}
+
+    bookmarked_raw = db.query(Bookmark.wave_id).filter(Bookmark.wave_id.in_(all_wave_ids), Bookmark.user_id == current_user.id).all()
+    bookmarked_set = {b[0] for b in bookmarked_raw}
+
+    # 5. Fetch polls & votes in batches
+    poll_ids = [w.poll.id for w in waves if w.poll]
+    for pw in parent_map.values():
+        if pw.poll:
+            poll_ids.append(pw.poll.id)
+            
+    poll_ids = list(set(poll_ids))
+
+    options_map = {}
+    votes_count_map = {}
+    my_vote_map = {}
+
+    if poll_ids:
+        options = db.query(PollOption).filter(PollOption.poll_id.in_(poll_ids)).all()
+        for opt in options:
+            options_map.setdefault(opt.poll_id, []).append(opt)
+
+        votes_counts = db.query(PollVote.option_id, func.count(PollVote.user_id)).filter(PollVote.poll_id.in_(poll_ids)).group_by(PollVote.option_id).all()
+        votes_count_map = {opt_id: count for opt_id, count in votes_counts}
+
+        my_votes = db.query(PollVote.poll_id, PollVote.option_id).filter(PollVote.poll_id.in_(poll_ids), PollVote.user_id == current_user.id).all()
+        my_vote_map = {poll_id: opt_id for poll_id, opt_id in my_votes}
+
+    # 6. Map to WaveResponse list
+    enriched_waves = []
+    for wave in waves:
+        # Resolve spread wave
+        spread_from_response = parent_map.get(wave.spread_from_id) if wave.spread_from_id else None
+
+        # Resolve poll
+        poll_response = None
+        if wave.poll:
+            db_options = options_map.get(wave.poll.id, [])
+            my_vote_option_id = my_vote_map.get(wave.poll.id)
+            
+            options_enriched = []
+            total_votes = 0
+            for opt in db_options:
+                opt_votes = votes_count_map.get(opt.id, 0)
+                total_votes += opt_votes
+                options_enriched.append(PollOptionResponse(
+                    id=opt.id,
+                    poll_id=opt.poll_id,
+                    text=opt.text,
+                    votes_count=opt_votes,
+                    voted_by_me=(my_vote_option_id == opt.id) if my_vote_option_id else False
+                ))
+            
+            poll_response = PollResponse(
+                id=wave.poll.id,
+                question=wave.poll.question,
+                expires_at=wave.poll.expires_at,
+                options=options_enriched,
+                total_votes=total_votes,
+                has_voted=my_vote_option_id is not None,
+                voted_option_id=my_vote_option_id
+            )
+
+        is_edited = False
+        if wave.updated_at and wave.created_at:
+            t1 = wave.updated_at.replace(tzinfo=None)
+            t2 = wave.created_at.replace(tzinfo=None)
+            if (t1 - t2).total_seconds() > 1.0:
+                is_edited = True
+
+        enriched_waves.append(WaveResponse(
+            id=wave.id,
+            content=wave.content,
+            media_url=wave.media_url,
+            media_type=wave.media_type,
+            creator_id=wave.creator_id,
+            creator=wave.creator,
+            created_at=wave.created_at,
+            parent_wave_id=wave.parent_wave_id,
+            spread_from_id=wave.spread_from_id,
+            spread_from=spread_from_response,
+            circle_id=wave.circle_id,
+            ripples_count=ripples_map.get(wave.id, 0),
+            joins_count=joins_map.get(wave.id, 0),
+            spreads_count=spreads_map.get(wave.id, 0),
+            rippled_by_me=wave.id in rippled_set,
+            spread_by_me=wave.id in spread_set,
+            bookmarked_by_me=wave.id in bookmarked_set,
+            poll=poll_response,
+            updated_at=wave.updated_at,
+            is_edited=is_edited
+        ))
+
+    return enriched_waves
+
 def enrich_wave(wave: Wave, db: Session, current_user: User) -> WaveResponse:
-    # Ripple status
-    rippled_by_me = db.query(Ripple).filter(
-        Ripple.user_id == current_user.id,
-        Ripple.wave_id == wave.id
-    ).first() is not None
-    
-    # Counts
-    ripples_count = db.query(Ripple).filter(Ripple.wave_id == wave.id).count()
-    joins_count = db.query(Wave).filter(Wave.parent_wave_id == wave.id).count()
-    spreads_count = db.query(Wave).filter(Wave.spread_from_id == wave.id).count()
-    
-    # Spread status
-    spread_by_me = db.query(Wave).filter(
-        Wave.creator_id == current_user.id,
-        Wave.spread_from_id == wave.id
-    ).first() is not None
-
-    # Bookmark status
-    bookmarked_by_me = db.query(Bookmark).filter(
-        Bookmark.user_id == current_user.id,
-        Bookmark.wave_id == wave.id
-    ).first() is not None
-
-    # Spread Wave resolution — only include if the referenced wave still exists
-    spread_from = None
-    if wave.spread_from_id:
-        parent = db.query(Wave).filter(Wave.id == wave.spread_from_id).first()
-        if parent is not None:
-            spread_from = enrich_wave(parent, db, current_user)
-
-    # Poll enrichment
-    poll_response = None
-    if wave.poll:
-        # Fetch options
-        db_options = db.query(PollOption).filter(PollOption.poll_id == wave.poll.id).all()
-        
-        # Check current user's vote
-        my_vote = db.query(PollVote).filter(
-            PollVote.poll_id == wave.poll.id,
-            PollVote.user_id == current_user.id
-        ).first()
-        
-        options_enriched = []
-        total_votes = 0
-        
-        for opt in db_options:
-            opt_votes = db.query(PollVote).filter(PollVote.option_id == opt.id).count()
-            total_votes += opt_votes
-            
-            options_enriched.append(PollOptionResponse(
-                id=opt.id,
-                poll_id=opt.poll_id,
-                text=opt.text,
-                votes_count=opt_votes,
-                voted_by_me=(my_vote.option_id == opt.id) if my_vote else False
-            ))
-            
-        poll_response = PollResponse(
-            id=wave.poll.id,
-            question=wave.poll.question,
-            expires_at=wave.poll.expires_at,
-            options=options_enriched,
-            total_votes=total_votes,
-            has_voted=my_vote is not None,
-            voted_option_id=my_vote.option_id if my_vote else None
-        )
-
-    is_edited = False
-    if wave.updated_at and wave.created_at:
-        t1 = wave.updated_at.replace(tzinfo=None)
-        t2 = wave.created_at.replace(tzinfo=None)
-        if (t1 - t2).total_seconds() > 1.0:
-            is_edited = True
-
-    return WaveResponse(
-        id=wave.id,
-        content=wave.content,
-        media_url=wave.media_url,
-        media_type=wave.media_type,
-        creator_id=wave.creator_id,
-        creator=wave.creator,
-        created_at=wave.created_at,
-        parent_wave_id=wave.parent_wave_id,
-        spread_from_id=wave.spread_from_id,
-        spread_from=spread_from,
-        circle_id=wave.circle_id,
-        ripples_count=ripples_count,
-        joins_count=joins_count,
-        spreads_count=spreads_count,
-        rippled_by_me=rippled_by_me,
-        spread_by_me=spread_by_me,
-        bookmarked_by_me=bookmarked_by_me,
-        poll=poll_response,
-        updated_at=wave.updated_at,
-        is_edited=is_edited
-    )
+    res = enrich_waves_bulk([wave], db, current_user)
+    return res[0]
 
 # Create Wave (Post / Comment / Join)
 @router.post("", response_model=WaveResponse, status_code=status.HTTP_201_CREATED)
@@ -252,7 +292,13 @@ def get_wave_stream(
     limit: int = 20,
     stream_type: str = Query("all", description="'all' for global, 'riding' for followings")
 ):
-    query = db.query(Wave).filter(Wave.parent_wave_id == None)
+    start_total = time.perf_counter()
+
+    query = db.query(Wave).options(
+        joinedload(Wave.creator),
+        joinedload(Wave.poll),
+        selectinload(Wave.hashtags)
+    ).filter(Wave.parent_wave_id == None)
 
     if stream_type == "riding":
         # Filter by people user rides with (follows)
@@ -261,8 +307,22 @@ def get_wave_stream(
         riding_ids.append(current_user.id) # Include own waves
         query = query.filter(Wave.creator_id.in_(riding_ids))
 
+    start_db = time.perf_counter()
     waves = query.order_by(Wave.created_at.desc()).offset(skip).limit(limit).all()
-    return [enrich_wave(w, db, current_user) for w in waves]
+    db_time = (time.perf_counter() - start_db) * 1000
+
+    start_enrich = time.perf_counter()
+    enriched = enrich_waves_bulk(waves, db, current_user)
+    enrich_time = (time.perf_counter() - start_enrich) * 1000
+
+    total_time = (time.perf_counter() - start_total) * 1000
+    logger.info(
+        "get_wave_stream performance: db_time=%.2fms, enrichment_time=%.2fms, total_time=%.2fms",
+        db_time,
+        enrich_time,
+        total_time
+    )
+    return enriched
 
 # Rising Waves (Trending)
 @router.get("/rising", response_model=List[WaveResponse])
@@ -272,6 +332,7 @@ def get_rising_waves(
     redis_client: redis.Redis = Depends(get_redis),
     limit: int = 10
 ):
+    start_total = time.perf_counter()
     cache_key = "cache:waves:rising_ids"
     cached_ids = redis_client.get(cache_key)
     
@@ -279,37 +340,83 @@ def get_rising_waves(
         # Cache hit: parse list of wave IDs
         wave_ids = json.loads(cached_ids)
         # Fetch waves in that order
-        waves = db.query(Wave).filter(Wave.id.in_(wave_ids)).all()
+        start_db = time.perf_counter()
+        waves = db.query(Wave).options(
+            joinedload(Wave.creator),
+            joinedload(Wave.poll),
+            selectinload(Wave.hashtags)
+        ).filter(Wave.id.in_(wave_ids)).all()
+        db_time = (time.perf_counter() - start_db) * 1000
+
         # Sort waves to match original cached ordering
         wave_map = {w.id: w for w in waves}
         sorted_waves = [wave_map[wid] for wid in wave_ids if wid in wave_map]
+        
+        start_enrich = time.perf_counter()
+        enriched = enrich_waves_bulk(sorted_waves, db, current_user)
+        enrich_time = (time.perf_counter() - start_enrich) * 1000
     else:
         # Cache miss: query database
-        raw_waves = db.query(Wave).filter(Wave.parent_wave_id == None).order_by(Wave.created_at.desc()).limit(30).all()
+        start_db = time.perf_counter()
+        raw_waves = db.query(Wave).options(
+            joinedload(Wave.creator),
+            joinedload(Wave.poll),
+            selectinload(Wave.hashtags)
+        ).filter(Wave.parent_wave_id == None).order_by(Wave.created_at.desc()).limit(30).all()
+        db_time = (time.perf_counter() - start_db) * 1000
+
         # Enrich and sort
-        enriched_temp = [enrich_wave(w, db, current_user) for w in raw_waves]
+        start_enrich = time.perf_counter()
+        enriched_temp = enrich_waves_bulk(raw_waves, db, current_user)
         enriched_temp.sort(key=lambda x: (x.ripples_count + x.joins_count + x.spreads_count), reverse=True)
-        top_waves = enriched_temp[:limit]
+        enriched = enriched_temp[:limit]
+        enrich_time = (time.perf_counter() - start_enrich) * 1000
         
         # Save IDs to redis
-        wave_ids = [tw.id for tw in top_waves]
+        wave_ids = [tw.id for tw in enriched]
         redis_client.setex(cache_key, 60, json.dumps(wave_ids))
-        return top_waves
 
-    return [enrich_wave(w, db, current_user) for w in sorted_waves][:limit]
+    total_time = (time.perf_counter() - start_total) * 1000
+    logger.info(
+        "get_rising_waves performance: db_time=%.2fms, enrichment_time=%.2fms, total_time=%.2fms",
+        db_time,
+        enrich_time,
+        total_time
+    )
+    return enriched[:limit]
 
 @router.get("/bookmarks", response_model=List[WaveResponse])
 def get_bookmarks(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
+    start_total = time.perf_counter()
+    start_db = time.perf_counter()
     bookmarks = db.query(Bookmark).filter(Bookmark.user_id == current_user.id).order_by(Bookmark.created_at.desc()).all()
     wave_ids = [b.wave_id for b in bookmarks]
-    waves = db.query(Wave).filter(Wave.id.in_(wave_ids)).all()
+    waves = db.query(Wave).options(
+        joinedload(Wave.creator),
+        joinedload(Wave.poll),
+        selectinload(Wave.hashtags)
+    ).filter(Wave.id.in_(wave_ids)).all()
+    db_time = (time.perf_counter() - start_db) * 1000
+
     # Preserve order
     wave_map = {w.id: w for w in waves}
     ordered_waves = [wave_map[wid] for wid in wave_ids if wid in wave_map]
-    return [enrich_wave(w, db, current_user) for w in ordered_waves]
+    
+    start_enrich = time.perf_counter()
+    enriched = enrich_waves_bulk(ordered_waves, db, current_user)
+    enrich_time = (time.perf_counter() - start_enrich) * 1000
+
+    total_time = (time.perf_counter() - start_total) * 1000
+    logger.info(
+        "get_bookmarks performance: db_time=%.2fms, enrichment_time=%.2fms, total_time=%.2fms",
+        db_time,
+        enrich_time,
+        total_time
+    )
+    return enriched
 
 # Add a bookmark
 @router.post("/{wave_id}/bookmark")
@@ -373,8 +480,27 @@ def get_wave_joins(
     skip: int = 0,
     limit: int = 50
 ):
-    joins = db.query(Wave).filter(Wave.parent_wave_id == wave_id).order_by(Wave.created_at.asc()).offset(skip).limit(limit).all()
-    return [enrich_wave(j, db, current_user) for j in joins]
+    start_total = time.perf_counter()
+    start_db = time.perf_counter()
+    joins = db.query(Wave).options(
+        joinedload(Wave.creator),
+        joinedload(Wave.poll),
+        selectinload(Wave.hashtags)
+    ).filter(Wave.parent_wave_id == wave_id).order_by(Wave.created_at.asc()).offset(skip).limit(limit).all()
+    db_time = (time.perf_counter() - start_db) * 1000
+
+    start_enrich = time.perf_counter()
+    enriched = enrich_waves_bulk(joins, db, current_user)
+    enrich_time = (time.perf_counter() - start_enrich) * 1000
+
+    total_time = (time.perf_counter() - start_total) * 1000
+    logger.info(
+        "get_wave_joins performance: db_time=%.2fms, enrichment_time=%.2fms, total_time=%.2fms",
+        db_time,
+        enrich_time,
+        total_time
+    )
+    return enriched
 
 # Ripple / Un-ripple wave (Like toggle)
 @router.post("/{wave_id}/ripple")
