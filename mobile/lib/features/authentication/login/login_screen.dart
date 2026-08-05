@@ -121,18 +121,24 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   validator: Validators.validatePassword,
                 ),
                 const SizedBox(height: AppTheme.spaceS),
-                Row(
+                Wrap(
+                  alignment: WrapAlignment.spaceBetween,
+                  crossAxisAlignment: WrapCrossAlignment.center,
                   children: [
-                    Checkbox(
-                      value: _rememberMe,
-                      onChanged: (val) {
-                        setState(() {
-                          _rememberMe = val ?? false;
-                        });
-                      },
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Checkbox(
+                          value: _rememberMe,
+                          onChanged: (val) {
+                            setState(() {
+                              _rememberMe = val ?? false;
+                            });
+                          },
+                        ),
+                        const Text('Remember me'),
+                      ],
                     ),
-                    const Text('Remember me'),
-                    const Spacer(),
                     TextButton(
                       onPressed: () => context.push('/forgot-password'),
                       child: const Text('Forgot Password?'),
@@ -146,8 +152,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   isLoading: isLoading,
                 ),
                 const SizedBox(height: AppTheme.spaceM),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
+                Wrap(
+                  alignment: WrapAlignment.center,
+                  crossAxisAlignment: WrapCrossAlignment.center,
                   children: [
                     const Text("Don't have an account?"),
                     TextButton(
