@@ -10,7 +10,12 @@ class ApiClient {
   final Dio dio;
   final SecureStorageService _secureStorage;
   final Logger _logger = Logger(
-    printer: PrettyPrinter(methodCount: 0, errorMethodCount: 5, lineLength: 90, colors: true, printEmojis: true),
+    printer: PrettyPrinter(
+        methodCount: 0,
+        errorMethodCount: 5,
+        lineLength: 90,
+        colors: true,
+        printEmojis: true),
     level: kDebugMode ? Level.debug : Level.warning,
   );
 
@@ -45,14 +50,16 @@ class ApiClient {
       },
       onResponse: (response, handler) {
         if (kDebugMode) {
-          _logger.i('RESPONSE[${response.statusCode}] => PATH: ${response.requestOptions.path}');
+          _logger.i(
+              'RESPONSE[${response.statusCode}] => PATH: ${response.requestOptions.path}');
           _logger.d('Data: ${response.data}');
         }
         return handler.next(response);
       },
       onError: (DioException e, handler) async {
         if (kDebugMode) {
-          _logger.e('ERROR[${e.response?.statusCode}] => PATH: ${e.requestOptions.path}');
+          _logger.e(
+              'ERROR[${e.response?.statusCode}] => PATH: ${e.requestOptions.path}');
           _logger.d('Error Message: ${e.message}');
           if (e.response?.data != null) {
             _logger.d('Error Data: ${e.response?.data}');
@@ -90,14 +97,14 @@ class ApiClient {
         if (error.response?.statusCode == 401 &&
             !requestOptions.path.contains('/auth/login') &&
             !requestOptions.path.contains('/auth/refresh')) {
-          
           try {
             final refreshed = await refreshToken();
             if (refreshed) {
               // Retry the failed request with the new access token
               final newAccessToken = await _secureStorage.getAccessToken();
-              requestOptions.headers['Authorization'] = 'Bearer $newAccessToken';
-              
+              requestOptions.headers['Authorization'] =
+                  'Bearer $newAccessToken';
+
               final response = await dio.fetch(requestOptions);
               return handler.resolve(response);
             }
@@ -155,8 +162,10 @@ class ApiClient {
       return TimeoutException('Connection timed out. Please try again.');
     }
 
-    if (e.type == DioExceptionType.connectionError || e.error is SocketException) {
-      return NetworkException('No internet connection. Please verify your connection.');
+    if (e.type == DioExceptionType.connectionError ||
+        e.error is SocketException) {
+      return NetworkException(
+          'No internet connection. Please verify your connection.');
     }
 
     final response = e.response;
@@ -180,7 +189,8 @@ class ApiClient {
         return AccountDeletedException(message);
       }
       if (code == 'ACCOUNT_DEACTIVATED_COOL_DOWN') {
-        final days = (data['error'] as Map<String, dynamic>?)?['days_remaining'];
+        final days =
+            (data['error'] as Map<String, dynamic>?)?['days_remaining'];
         double? daysRemaining;
         if (days != null) {
           daysRemaining = double.tryParse(days.toString());
@@ -201,7 +211,8 @@ class ApiClient {
         case 404:
           return NotFoundException(message, code);
         case 500:
-          return ServerException('Internal Server Error. Please contact support.');
+          return ServerException(
+              'Internal Server Error. Please contact support.');
         default:
           return AppException(message, code);
       }

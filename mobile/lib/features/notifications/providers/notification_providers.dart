@@ -38,7 +38,8 @@ class NotificationState {
 class NotificationNotifier extends StateNotifier<NotificationState> {
   final AlertRepository _alertRepo;
 
-  NotificationNotifier(this._alertRepo) : super(const NotificationState.initial()) {
+  NotificationNotifier(this._alertRepo)
+      : super(const NotificationState.initial()) {
     loadAlerts();
   }
 
@@ -54,10 +55,12 @@ class NotificationNotifier extends StateNotifier<NotificationState> {
 
   Future<void> markRead(String alertId) async {
     final originalAlerts = [...state.alerts];
-    
+
     // Optimistic Update
     state = state.copyWith(
-      alerts: state.alerts.map((a) => a.id == alertId ? a.copyWith(isRead: true) : a).toList(),
+      alerts: state.alerts
+          .map((a) => a.id == alertId ? a.copyWith(isRead: true) : a)
+          .toList(),
     );
 
     try {
@@ -101,7 +104,8 @@ class NotificationNotifier extends StateNotifier<NotificationState> {
   }
 }
 
-final notificationProvider = StateNotifierProvider<NotificationNotifier, NotificationState>((ref) {
+final notificationProvider =
+    StateNotifierProvider<NotificationNotifier, NotificationState>((ref) {
   final alertRepo = ref.watch(alertRepositoryProvider);
   return NotificationNotifier(alertRepo);
 });
@@ -176,7 +180,8 @@ class BookmarkNotifier extends StateNotifier<BookmarkState> {
   }
 }
 
-final bookmarkProvider = StateNotifierProvider<BookmarkNotifier, BookmarkState>((ref) {
+final bookmarkProvider =
+    StateNotifierProvider<BookmarkNotifier, BookmarkState>((ref) {
   final waveRepo = ref.watch(waveRepositoryProvider);
   return BookmarkNotifier(waveRepo);
 });

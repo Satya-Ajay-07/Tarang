@@ -15,7 +15,8 @@ class FakeSecureStorageService implements SecureStorageService {
   final Map<String, String> _data = {};
 
   @override
-  Future<void> saveAccessToken(String token) async => _data['accessToken'] = token;
+  Future<void> saveAccessToken(String token) async =>
+      _data['accessToken'] = token;
 
   @override
   Future<String?> getAccessToken() async => _data['accessToken'];
@@ -24,7 +25,8 @@ class FakeSecureStorageService implements SecureStorageService {
   Future<void> deleteAccessToken() async => _data.remove('accessToken');
 
   @override
-  Future<void> saveRefreshToken(String token) async => _data['refreshToken'] = token;
+  Future<void> saveRefreshToken(String token) async =>
+      _data['refreshToken'] = token;
 
   @override
   Future<String?> getRefreshToken() async => _data['refreshToken'];
@@ -33,7 +35,8 @@ class FakeSecureStorageService implements SecureStorageService {
   Future<void> deleteRefreshToken() async => _data.remove('refreshToken');
 
   @override
-  Future<void> saveRememberMe(bool remember) async => _data['rememberMe'] = remember.toString();
+  Future<void> saveRememberMe(bool remember) async =>
+      _data['rememberMe'] = remember.toString();
 
   @override
   Future<bool> getRememberMe() async => _data['rememberMe'] == 'true';
@@ -75,13 +78,14 @@ class FakeAuthenticationRepository implements AuthenticationRepository {
     if (shouldThrowGenericException) {
       throw Exception('Generic error');
     }
-    return mockUser ?? UserModel(
-      id: '1',
-      username: 'testuser',
-      email: 'test@example.com',
-      createdAt: DateTime.now(),
-      role: 'user',
-    );
+    return mockUser ??
+        UserModel(
+          id: '1',
+          username: 'testuser',
+          email: 'test@example.com',
+          createdAt: DateTime.now(),
+          role: 'user',
+        );
   }
 
   @override
@@ -91,7 +95,7 @@ class FakeAuthenticationRepository implements AuthenticationRepository {
 class MockGoRouterState implements GoRouterState {
   @override
   final Uri uri;
-  
+
   MockGoRouterState(String path) : uri = Uri.parse(path);
 
   @override
@@ -124,7 +128,9 @@ void main() {
   });
 
   group('Auth State and Redirect Tests', () {
-    test('1. Launching the app with no stored tokens transitions to initial -> redirects to /login', () async {
+    test(
+        '1. Launching the app with no stored tokens transitions to initial -> redirects to /login',
+        () async {
       final notifier = container.read(authProvider.notifier);
       await notifier.checkAuthentication();
 
@@ -132,11 +138,14 @@ void main() {
       expect(state.status, AuthStatus.initial);
 
       final helper = container.read(appRouterHelperProvider);
-      final redirectPath = helper.redirect(FakeBuildContext(), MockGoRouterState('/splash'));
+      final redirectPath =
+          helper.redirect(FakeBuildContext(), MockGoRouterState('/splash'));
       expect(redirectPath, '/login');
     });
 
-    test('2. Launching with valid tokens transitions to authenticated -> redirects to /home', () async {
+    test(
+        '2. Launching with valid tokens transitions to authenticated -> redirects to /home',
+        () async {
       await fakeSecureStorage.saveAccessToken('valid_access_token');
       await fakeSecureStorage.saveRefreshToken('valid_refresh_token');
 
@@ -147,11 +156,14 @@ void main() {
       expect(state.status, AuthStatus.authenticated);
 
       final helper = container.read(appRouterHelperProvider);
-      final redirectPath = helper.redirect(FakeBuildContext(), MockGoRouterState('/splash'));
+      final redirectPath =
+          helper.redirect(FakeBuildContext(), MockGoRouterState('/splash'));
       expect(redirectPath, '/home');
     });
 
-    test('3. Launching with an unverified account transitions to unverified -> redirects to /resend-verification', () async {
+    test(
+        '3. Launching with an unverified account transitions to unverified -> redirects to /resend-verification',
+        () async {
       await fakeSecureStorage.saveAccessToken('valid_access_token');
       await fakeSecureStorage.saveRefreshToken('valid_refresh_token');
       fakeAuthRepository.shouldThrowEmailNotVerified = true;
@@ -163,11 +175,14 @@ void main() {
       expect(state.status, AuthStatus.unverified);
 
       final helper = container.read(appRouterHelperProvider);
-      final redirectPath = helper.redirect(FakeBuildContext(), MockGoRouterState('/splash'));
+      final redirectPath =
+          helper.redirect(FakeBuildContext(), MockGoRouterState('/splash'));
       expect(redirectPath, '/resend-verification');
     });
 
-    test('4. Launching with a deactivated account transitions to deactivated -> redirects to /login', () async {
+    test(
+        '4. Launching with a deactivated account transitions to deactivated -> redirects to /login',
+        () async {
       await fakeSecureStorage.saveAccessToken('valid_access_token');
       await fakeSecureStorage.saveRefreshToken('valid_refresh_token');
       fakeAuthRepository.shouldThrowDeactivated = true;
@@ -179,11 +194,14 @@ void main() {
       expect(state.status, AuthStatus.deactivated);
 
       final helper = container.read(appRouterHelperProvider);
-      final redirectPath = helper.redirect(FakeBuildContext(), MockGoRouterState('/splash'));
+      final redirectPath =
+          helper.redirect(FakeBuildContext(), MockGoRouterState('/splash'));
       expect(redirectPath, '/login');
     });
 
-    test('5. Launching with generic error clears tokens and transitions to initial -> redirects to /login', () async {
+    test(
+        '5. Launching with generic error clears tokens and transitions to initial -> redirects to /login',
+        () async {
       await fakeSecureStorage.saveAccessToken('valid_access_token');
       await fakeSecureStorage.saveRefreshToken('valid_refresh_token');
       fakeAuthRepository.shouldThrowGenericException = true;
@@ -197,7 +215,8 @@ void main() {
       expect(await fakeSecureStorage.getRefreshToken(), isNull);
 
       final helper = container.read(appRouterHelperProvider);
-      final redirectPath = helper.redirect(FakeBuildContext(), MockGoRouterState('/splash'));
+      final redirectPath =
+          helper.redirect(FakeBuildContext(), MockGoRouterState('/splash'));
       expect(redirectPath, '/login');
     });
   });

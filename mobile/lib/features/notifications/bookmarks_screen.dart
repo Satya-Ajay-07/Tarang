@@ -24,7 +24,8 @@ class BookmarksScreen extends ConsumerWidget {
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        const Icon(Icons.cloud_off, size: 64, color: Colors.grey),
+                        const Icon(Icons.cloud_off,
+                            size: 64, color: Colors.grey),
                         const SizedBox(height: AppTheme.spaceM),
                         Text(state.errorMessage!),
                         const SizedBox(height: AppTheme.spaceM),
@@ -42,11 +43,13 @@ class BookmarksScreen extends ConsumerWidget {
                           child: Column(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              const Icon(Icons.bookmark_border, size: 72, color: Colors.grey),
+                              const Icon(Icons.bookmark_border,
+                                  size: 72, color: Colors.grey),
                               const SizedBox(height: AppTheme.spaceM),
                               const Text(
                                 'Save Waves for Later',
-                                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+                                style: TextStyle(
+                                    fontWeight: FontWeight.bold, fontSize: 18),
                               ),
                               const SizedBox(height: AppTheme.spaceS),
                               const Text(

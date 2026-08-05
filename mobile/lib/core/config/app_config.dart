@@ -7,6 +7,5 @@ class AppConfig {
 
   static const bool isProduction = true;
 
-  static String get baseUrl =>
-      isProduction ? prodBaseUrl : devBaseUrl;
+  static String get baseUrl => isProduction ? prodBaseUrl : devBaseUrl;
 }

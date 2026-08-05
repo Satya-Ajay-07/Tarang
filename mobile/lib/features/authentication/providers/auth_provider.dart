@@ -110,11 +110,12 @@ class AuthNotifier extends StateNotifier<AuthState> {
     await checkAuthentication();
   }
 
-  Future<void> login(String usernameOrEmail, String password, bool rememberMe) async {
+  Future<void> login(
+      String usernameOrEmail, String password, bool rememberMe) async {
     state = const AuthState.checking();
     try {
       final token = await _authRepository.login(usernameOrEmail, password);
-      
+
       await _secureStorage.saveAccessToken(token.accessToken);
       await _secureStorage.saveRefreshToken(token.refreshToken);
       await _secureStorage.saveRememberMe(rememberMe);
@@ -128,7 +129,8 @@ class AuthNotifier extends StateNotifier<AuthState> {
       final user = await _authRepository.getMe();
       state = AuthState.authenticated(user);
     } on EmailNotVerifiedException {
-      state = AuthState.unverified(usernameOrEmail.contains('@') ? usernameOrEmail : '');
+      state = AuthState.unverified(
+          usernameOrEmail.contains('@') ? usernameOrEmail : '');
     } on AccountDeactivatedException catch (e) {
       state = AuthState.deactivated(e.message, e.daysRemaining);
     } on AppException catch (e) {
@@ -165,7 +167,8 @@ class AuthNotifier extends StateNotifier<AuthState> {
     } on AppException catch (e) {
       state = AuthState.error(e.message);
     } catch (e) {
-      state = AuthState.error('An unexpected error occurred during registration.');
+      state =
+          AuthState.error('An unexpected error occurred during registration.');
     }
   }
 
@@ -185,7 +188,8 @@ class AuthNotifier extends StateNotifier<AuthState> {
   }
 
   void clearError() {
-    if (state.status == AuthStatus.error || state.status == AuthStatus.deactivated) {
+    if (state.status == AuthStatus.error ||
+        state.status == AuthStatus.deactivated) {
       state = const AuthState.initial();
     }
   }

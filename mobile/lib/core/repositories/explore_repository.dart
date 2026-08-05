@@ -9,8 +9,10 @@ abstract class ExploreRepository {
   Future<List<UserModel>> getSuggestedRiders({int limit = 5});
   Future<SearchResultModel> search(String query, {String kind = 'all'});
   Future<List<TrendingHashtagModel>> getTrendingHashtags({int limit = 10});
-  Future<List<TrendingHashtagModel>> searchHashtags(String query, {int limit = 10});
-  Future<List<WaveModel>> getWavesByHashtag(String tag, {int skip = 0, int limit = 20});
+  Future<List<TrendingHashtagModel>> searchHashtags(String query,
+      {int limit = 10});
+  Future<List<WaveModel>> getWavesByHashtag(String tag,
+      {int skip = 0, int limit = 20});
   Future<List<WaveModel>> getRisingWaves({int limit = 10});
   Future<Map<String, dynamic>> toggleRide(String userId);
 }
@@ -28,7 +30,9 @@ class ExploreRepositoryImpl implements ExploreRepository {
         queryParameters: {'limit': limit},
       );
       final list = response.data as List<dynamic>;
-      return list.map((e) => UserModel.fromJson(e as Map<String, dynamic>)).toList();
+      return list
+          .map((e) => UserModel.fromJson(e as Map<String, dynamic>))
+          .toList();
     } on DioException catch (e) {
       throw _apiClient.handleError(e);
     }
@@ -51,21 +55,25 @@ class ExploreRepositoryImpl implements ExploreRepository {
   }
 
   @override
-  Future<List<TrendingHashtagModel>> getTrendingHashtags({int limit = 10}) async {
+  Future<List<TrendingHashtagModel>> getTrendingHashtags(
+      {int limit = 10}) async {
     try {
       final response = await _apiClient.dio.get(
         '/hashtags/trending',
         queryParameters: {'limit': limit},
       );
       final list = response.data as List<dynamic>;
-      return list.map((e) => TrendingHashtagModel.fromJson(e as Map<String, dynamic>)).toList();
+      return list
+          .map((e) => TrendingHashtagModel.fromJson(e as Map<String, dynamic>))
+          .toList();
     } on DioException catch (e) {
       throw _apiClient.handleError(e);
     }
   }
 
   @override
-  Future<List<TrendingHashtagModel>> searchHashtags(String query, {int limit = 10}) async {
+  Future<List<TrendingHashtagModel>> searchHashtags(String query,
+      {int limit = 10}) async {
     try {
       final response = await _apiClient.dio.get(
         '/hashtags/search',
@@ -75,14 +83,17 @@ class ExploreRepositoryImpl implements ExploreRepository {
         },
       );
       final list = response.data as List<dynamic>;
-      return list.map((e) => TrendingHashtagModel.fromJson(e as Map<String, dynamic>)).toList();
+      return list
+          .map((e) => TrendingHashtagModel.fromJson(e as Map<String, dynamic>))
+          .toList();
     } on DioException catch (e) {
       throw _apiClient.handleError(e);
     }
   }
 
   @override
-  Future<List<WaveModel>> getWavesByHashtag(String tag, {int skip = 0, int limit = 20}) async {
+  Future<List<WaveModel>> getWavesByHashtag(String tag,
+      {int skip = 0, int limit = 20}) async {
     try {
       final cleanTag = tag.startsWith('#') ? tag.substring(1) : tag;
       final response = await _apiClient.dio.get(
@@ -93,7 +104,9 @@ class ExploreRepositoryImpl implements ExploreRepository {
         },
       );
       final list = response.data as List<dynamic>;
-      return list.map((e) => WaveModel.fromJson(e as Map<String, dynamic>)).toList();
+      return list
+          .map((e) => WaveModel.fromJson(e as Map<String, dynamic>))
+          .toList();
     } on DioException catch (e) {
       throw _apiClient.handleError(e);
     }
@@ -107,7 +120,9 @@ class ExploreRepositoryImpl implements ExploreRepository {
         queryParameters: {'limit': limit},
       );
       final list = response.data as List<dynamic>;
-      return list.map((e) => WaveModel.fromJson(e as Map<String, dynamic>)).toList();
+      return list
+          .map((e) => WaveModel.fromJson(e as Map<String, dynamic>))
+          .toList();
     } on DioException catch (e) {
       throw _apiClient.handleError(e);
     }

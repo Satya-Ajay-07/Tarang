@@ -77,10 +77,11 @@ class ExploreNotifier extends StateNotifier<ExploreState> {
 
   Future<void> toggleRideSuggested(String userId) async {
     final originalSuggested = [...state.suggestedRiders];
-    
+
     // Optimistically remove user from suggestions list
     state = state.copyWith(
-      suggestedRiders: state.suggestedRiders.where((u) => u.id != userId).toList(),
+      suggestedRiders:
+          state.suggestedRiders.where((u) => u.id != userId).toList(),
     );
 
     try {
@@ -92,7 +93,8 @@ class ExploreNotifier extends StateNotifier<ExploreState> {
   }
 }
 
-final exploreProvider = StateNotifierProvider<ExploreNotifier, ExploreState>((ref) {
+final exploreProvider =
+    StateNotifierProvider<ExploreNotifier, ExploreState>((ref) {
   final exploreRepo = ref.watch(exploreRepositoryProvider);
   return ExploreNotifier(exploreRepo);
 });
@@ -102,7 +104,8 @@ class SearchState {
   final bool isLoading;
   final String query;
   final List<UserModel> people;
-  final List<WaveModel> waves; // List of enriched full waves (fetched concurrently)
+  final List<WaveModel>
+      waves; // List of enriched full waves (fetched concurrently)
   final List<String> recentSearches;
   final String? errorMessage;
 
@@ -147,7 +150,8 @@ class SearchNotifier extends StateNotifier<SearchState> {
   final WaveRepository _waveRepo;
   final SecureStorageService _secureStorage;
 
-  SearchNotifier(this._exploreRepo, this._waveRepo, this._secureStorage) : super(const SearchState.initial()) {
+  SearchNotifier(this._exploreRepo, this._waveRepo, this._secureStorage)
+      : super(const SearchState.initial()) {
     _loadRecentSearches();
   }
 
@@ -159,7 +163,9 @@ class SearchNotifier extends StateNotifier<SearchState> {
 
   void addRecentSearch(String search) {
     if (search.trim().isEmpty) return;
-    final updated = [search, ...state.recentSearches.where((s) => s != search)].take(10).toList();
+    final updated = [search, ...state.recentSearches.where((s) => s != search)]
+        .take(10)
+        .toList();
     state = state.copyWith(recentSearches: updated);
   }
 
@@ -169,7 +175,8 @@ class SearchNotifier extends StateNotifier<SearchState> {
 
   Future<void> search(String query, {String kind = 'all'}) async {
     if (query.trim().isEmpty) {
-      state = state.copyWith(query: '', people: [], waves: [], isLoading: false);
+      state =
+          state.copyWith(query: '', people: [], waves: [], isLoading: false);
       return;
     }
 
@@ -177,7 +184,7 @@ class SearchNotifier extends StateNotifier<SearchState> {
 
     try {
       final searchResult = await _exploreRepo.search(query, kind: kind);
-      
+
       // Concurrently fetch the full WaveModels for the simplified search wave results
       // to supply creator avatar metadata required by the reusable WaveCard.
       final wavesList = await Future.wait(
@@ -218,7 +225,8 @@ class SearchNotifier extends StateNotifier<SearchState> {
   }
 }
 
-final searchProvider = StateNotifierProvider<SearchNotifier, SearchState>((ref) {
+final searchProvider =
+    StateNotifierProvider<SearchNotifier, SearchState>((ref) {
   final exploreRepo = ref.watch(exploreRepositoryProvider);
   final waveRepo = ref.watch(waveRepositoryProvider);
   final secureStorage = ref.watch(secureStorageServiceProvider);
@@ -259,7 +267,8 @@ class HashtagNotifier extends StateNotifier<HashtagState> {
   final ExploreRepository _exploreRepo;
   final String _tag;
 
-  HashtagNotifier(this._exploreRepo, this._tag) : super(const HashtagState.initial()) {
+  HashtagNotifier(this._exploreRepo, this._tag)
+      : super(const HashtagState.initial()) {
     loadHashtagWaves();
   }
 
@@ -281,7 +290,9 @@ class HashtagNotifier extends StateNotifier<HashtagState> {
   }
 }
 
-final hashtagProvider = StateNotifierProvider.family<HashtagNotifier, HashtagState, String>((ref, tag) {
+final hashtagProvider =
+    StateNotifierProvider.family<HashtagNotifier, HashtagState, String>(
+        (ref, tag) {
   final exploreRepo = ref.watch(exploreRepositoryProvider);
   return HashtagNotifier(exploreRepo, tag);
 });

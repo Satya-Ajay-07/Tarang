@@ -25,7 +25,7 @@ class _ComposeScreenState extends ConsumerState<ComposeScreen> {
   final _textController = TextEditingController();
   bool _isLoading = false;
   bool _shouldAllowPop = false;
-  
+
   // Poll creation fields
   bool _isCreatingPoll = false;
   final _pollQuestionController = TextEditingController();
@@ -53,7 +53,8 @@ class _ComposeScreenState extends ConsumerState<ComposeScreen> {
   }
 
   Future<void> _handleBack() async {
-    final hasDraft = _textController.text.isNotEmpty || _pollQuestionController.text.isNotEmpty;
+    final hasDraft = _textController.text.isNotEmpty ||
+        _pollQuestionController.text.isNotEmpty;
     if (hasDraft) {
       final confirm = await AppDialogs.showConfirmation(
         context: context,
@@ -124,7 +125,7 @@ class _ComposeScreenState extends ConsumerState<ComposeScreen> {
             .map((c) => {'text': c.text.trim()})
             .where((opt) => (opt['text'] as String).isNotEmpty)
             .toList();
-            
+
         if (options.length >= 2) {
           pollData = {
             'question': _pollQuestionController.text.trim(),
@@ -148,13 +149,15 @@ class _ComposeScreenState extends ConsumerState<ComposeScreen> {
 
       // Add to UI feed state
       ref.read(feedProvider.notifier).addOrUpdateWave(result);
-      
+
       // Refresh feed to get latest updates
       await ref.read(feedProvider.notifier).loadFeed(refresh: true);
-      
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(widget.editWave != null ? 'Wave saved' : 'Wave posted')),
+          SnackBar(
+              content:
+                  Text(widget.editWave != null ? 'Wave saved' : 'Wave posted')),
         );
         setState(() {
           _shouldAllowPop = true;
@@ -189,7 +192,9 @@ class _ComposeScreenState extends ConsumerState<ComposeScreen> {
     final isEditing = widget.editWave != null;
 
     return PopScope(
-      canPop: _shouldAllowPop || (_textController.text.isEmpty && _pollQuestionController.text.isEmpty),
+      canPop: _shouldAllowPop ||
+          (_textController.text.isEmpty &&
+              _pollQuestionController.text.isEmpty),
       onPopInvokedWithResult: (didPop, _) {
         if (!didPop) {
           _handleBack();
@@ -210,20 +215,24 @@ class _ComposeScreenState extends ConsumerState<ComposeScreen> {
             Padding(
               padding: const EdgeInsets.only(right: 8.0),
               child: TextButton(
-                onPressed: (_isLoading || (_textController.text.trim().isEmpty && widget.spreadFromWave == null))
+                onPressed: (_isLoading ||
+                        (_textController.text.trim().isEmpty &&
+                            widget.spreadFromWave == null))
                     ? null
                     : _handlePost,
                 child: _isLoading
                     ? const SizedBox(
                         width: 18,
                         height: 18,
-                        child: CircularProgressIndicator(strokeWidth: 2, color: AppTheme.primaryTeal),
+                        child: CircularProgressIndicator(
+                            strokeWidth: 2, color: AppTheme.primaryTeal),
                       )
                     : Text(
                         isEditing ? 'Save' : 'Post',
                         style: TextStyle(
                           fontWeight: FontWeight.bold,
-                          color: (_textController.text.trim().isEmpty && widget.spreadFromWave == null)
+                          color: (_textController.text.trim().isEmpty &&
+                                  widget.spreadFromWave == null)
                               ? Colors.grey
                               : AppTheme.primaryTeal,
                         ),
@@ -256,7 +265,7 @@ class _ComposeScreenState extends ConsumerState<ComposeScreen> {
                           counterText: '', // Hide default counter
                         ),
                       ),
-                      
+
                       // Character limit counter row
                       Row(
                         mainAxisAlignment: MainAxisAlignment.end,
@@ -264,7 +273,9 @@ class _ComposeScreenState extends ConsumerState<ComposeScreen> {
                           Text(
                             '$characterCount / 280',
                             style: TextStyle(
-                              color: characterCount > 250 ? Colors.red : Colors.grey,
+                              color: characterCount > 250
+                                  ? Colors.red
+                                  : Colors.grey,
                             ),
                           ),
                         ],
@@ -277,7 +288,8 @@ class _ComposeScreenState extends ConsumerState<ComposeScreen> {
                           padding: const EdgeInsets.all(AppTheme.spaceM),
                           decoration: BoxDecoration(
                             border: Border.all(color: Colors.grey.shade300),
-                            borderRadius: BorderRadius.circular(AppTheme.radiusM),
+                            borderRadius:
+                                BorderRadius.circular(AppTheme.radiusM),
                           ),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
@@ -285,19 +297,22 @@ class _ComposeScreenState extends ConsumerState<ComposeScreen> {
                               Row(
                                 children: [
                                   CustomAvatar(
-                                    url: widget.spreadFromWave!.creator.avatarUrl,
+                                    url: widget
+                                        .spreadFromWave!.creator.avatarUrl,
                                     radius: 12,
                                   ),
                                   const SizedBox(width: 8),
                                   Text(
                                     widget.spreadFromWave!.creator.fullName ??
                                         widget.spreadFromWave!.creator.username,
-                                    style: const TextStyle(fontWeight: FontWeight.bold),
+                                    style: const TextStyle(
+                                        fontWeight: FontWeight.bold),
                                   ),
                                   const SizedBox(width: 4),
                                   Text(
                                     '@${widget.spreadFromWave!.creator.username}',
-                                    style: const TextStyle(color: Colors.grey, fontSize: 13),
+                                    style: const TextStyle(
+                                        color: Colors.grey, fontSize: 13),
                                   ),
                                 ],
                               ),
@@ -320,13 +335,18 @@ class _ComposeScreenState extends ConsumerState<ComposeScreen> {
                               children: [
                                 Row(
                                   children: [
-                                    const Icon(Icons.poll_outlined, color: AppTheme.primaryTeal),
+                                    const Icon(Icons.poll_outlined,
+                                        color: AppTheme.primaryTeal),
                                     const SizedBox(width: 8),
-                                    const Text('Create Poll', style: TextStyle(fontWeight: FontWeight.bold)),
+                                    const Text('Create Poll',
+                                        style: TextStyle(
+                                            fontWeight: FontWeight.bold)),
                                     const Spacer(),
                                     IconButton(
-                                      icon: const Icon(Icons.close_rounded, size: 20),
-                                      onPressed: () => setState(() => _isCreatingPoll = false),
+                                      icon: const Icon(Icons.close_rounded,
+                                          size: 20),
+                                      onPressed: () => setState(
+                                          () => _isCreatingPoll = false),
                                     ),
                                   ],
                                 ),
@@ -339,11 +359,15 @@ class _ComposeScreenState extends ConsumerState<ComposeScreen> {
                                   ),
                                 ),
                                 const SizedBox(height: AppTheme.spaceM),
-                                ..._pollOptionControllers.asMap().entries.map((entry) {
+                                ..._pollOptionControllers
+                                    .asMap()
+                                    .entries
+                                    .map((entry) {
                                   final idx = entry.key;
                                   final controller = entry.value;
                                   return Padding(
-                                    padding: const EdgeInsets.only(bottom: AppTheme.spaceS),
+                                    padding: const EdgeInsets.only(
+                                        bottom: AppTheme.spaceS),
                                     child: Row(
                                       children: [
                                         Expanded(
@@ -357,8 +381,11 @@ class _ComposeScreenState extends ConsumerState<ComposeScreen> {
                                         ),
                                         if (_pollOptionControllers.length > 2)
                                           IconButton(
-                                            icon: const Icon(Icons.remove_circle_outline, color: Colors.red),
-                                            onPressed: () => _removePollOption(idx),
+                                            icon: const Icon(
+                                                Icons.remove_circle_outline,
+                                                color: Colors.red),
+                                            onPressed: () =>
+                                                _removePollOption(idx),
                                           ),
                                       ],
                                     ),
@@ -384,14 +411,17 @@ class _ComposeScreenState extends ConsumerState<ComposeScreen> {
               // Bottom Actions Bar
               if (!isEditing && !isQuoteSpread)
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                   decoration: BoxDecoration(
-                    border: Border(top: BorderSide(color: Colors.grey.shade200)),
+                    border:
+                        Border(top: BorderSide(color: Colors.grey.shade200)),
                   ),
                   child: Row(
                     children: [
                       IconButton(
-                        icon: const Icon(Icons.poll_outlined, color: AppTheme.primaryTeal),
+                        icon: const Icon(Icons.poll_outlined,
+                            color: AppTheme.primaryTeal),
                         onPressed: () {
                           setState(() {
                             _isCreatingPoll = !_isCreatingPoll;
@@ -399,7 +429,8 @@ class _ComposeScreenState extends ConsumerState<ComposeScreen> {
                         },
                       ),
                       IconButton(
-                        icon: const Icon(Icons.image_outlined, color: Colors.grey),
+                        icon: const Icon(Icons.image_outlined,
+                            color: Colors.grey),
                         onPressed: () {}, // Future ready placeholder
                       ),
                     ],

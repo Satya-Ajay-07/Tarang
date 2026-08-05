@@ -251,10 +251,13 @@ class CustomAvatar extends StatelessWidget {
   Widget build(BuildContext context) {
     return CircleAvatar(
       radius: radius,
-      backgroundColor: Theme.of(context).colorScheme.primary.withValues(alpha: 0.2),
-      backgroundImage: url != null && url!.isNotEmpty ? NetworkImage(url!) : null,
+      backgroundColor:
+          Theme.of(context).colorScheme.primary.withValues(alpha: 0.2),
+      backgroundImage:
+          url != null && url!.isNotEmpty ? NetworkImage(url!) : null,
       child: url == null || url!.isEmpty
-          ? Icon(Icons.person, size: radius, color: Theme.of(context).colorScheme.primary)
+          ? Icon(Icons.person,
+              size: radius, color: Theme.of(context).colorScheme.primary)
           : null,
     );
   }

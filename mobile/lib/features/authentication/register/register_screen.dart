@@ -36,7 +36,8 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     if (!_agreeToTerms) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('You must agree to the Terms of Service & Privacy Policy.'),
+          content:
+              Text('You must agree to the Terms of Service & Privacy Policy.'),
           backgroundColor: Colors.red,
         ),
       );
@@ -48,7 +49,9 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
             email: _emailController.text.trim(),
             username: _usernameController.text.trim(),
             password: _passwordController.text,
-            fullName: _fullNameController.text.trim().isEmpty ? null : _fullNameController.text.trim(),
+            fullName: _fullNameController.text.trim().isEmpty
+                ? null
+                : _fullNameController.text.trim(),
           );
     }
   }

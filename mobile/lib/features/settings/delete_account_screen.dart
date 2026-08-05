@@ -7,7 +7,8 @@ class DeleteAccountScreen extends ConsumerStatefulWidget {
   const DeleteAccountScreen({super.key});
 
   @override
-  ConsumerState<DeleteAccountScreen> createState() => _DeleteAccountScreenState();
+  ConsumerState<DeleteAccountScreen> createState() =>
+      _DeleteAccountScreenState();
 }
 
 class _DeleteAccountScreenState extends ConsumerState<DeleteAccountScreen> {
@@ -38,7 +39,8 @@ class _DeleteAccountScreenState extends ConsumerState<DeleteAccountScreen> {
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('Delete Permanently', style: TextStyle(color: Colors.red)),
+            child: const Text('Delete Permanently',
+                style: TextStyle(color: Colors.red)),
           ),
         ],
       ),
@@ -62,14 +64,17 @@ class _DeleteAccountScreenState extends ConsumerState<DeleteAccountScreen> {
             ),
             TextButton(
               onPressed: () => Navigator.pop(context, true),
-              child: const Text('Yes, Purge Everything', style: TextStyle(color: Colors.red)),
+              child: const Text('Yes, Purge Everything',
+                  style: TextStyle(color: Colors.red)),
             ),
           ],
         ),
       );
 
       if (doubleConfirm == true) {
-        await ref.read(settingsProvider.notifier).deleteAccount(_passwordController.text);
+        await ref
+            .read(settingsProvider.notifier)
+            .deleteAccount(_passwordController.text);
       }
     }
   }
@@ -101,7 +106,10 @@ class _DeleteAccountScreenState extends ConsumerState<DeleteAccountScreen> {
                     children: [
                       Text(
                         '🚨 PERMANENT PURGE WARNING',
-                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Colors.red),
+                        style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 15,
+                            color: Colors.red),
                       ),
                       SizedBox(height: AppTheme.spaceS),
                       Text(
@@ -130,12 +138,15 @@ class _DeleteAccountScreenState extends ConsumerState<DeleteAccountScreen> {
                   labelText: 'Confirm Password to Purge',
                   border: const OutlineInputBorder(),
                   suffixIcon: IconButton(
-                    icon: Icon(_obscureText ? Icons.visibility : Icons.visibility_off),
-                    onPressed: () => setState(() => _obscureText = !_obscureText),
+                    icon: Icon(
+                        _obscureText ? Icons.visibility : Icons.visibility_off),
+                    onPressed: () =>
+                        setState(() => _obscureText = !_obscureText),
                   ),
                 ),
                 validator: (val) {
-                  if (val == null || val.isEmpty) return 'Please enter your password to confirm purge';
+                  if (val == null || val.isEmpty)
+                    return 'Please enter your password to confirm purge';
                   return null;
                 },
               ),

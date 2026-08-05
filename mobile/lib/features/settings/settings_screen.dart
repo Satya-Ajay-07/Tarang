@@ -40,7 +40,9 @@ class SettingsScreen extends ConsumerWidget {
                     ),
                     onTap: () {
                       setState(() => selectedTheme = ThemeMode.light);
-                      ref.read(themeProvider.notifier).setTheme(ThemeMode.light);
+                      ref
+                          .read(themeProvider.notifier)
+                          .setTheme(ThemeMode.light);
                       Navigator.pop(context);
                     },
                   ),
@@ -72,7 +74,9 @@ class SettingsScreen extends ConsumerWidget {
                     ),
                     onTap: () {
                       setState(() => selectedTheme = ThemeMode.system);
-                      ref.read(themeProvider.notifier).setTheme(ThemeMode.system);
+                      ref
+                          .read(themeProvider.notifier)
+                          .setTheme(ThemeMode.system);
                       Navigator.pop(context);
                     },
                   ),
@@ -138,9 +142,10 @@ class SettingsScreen extends ConsumerWidget {
                   children: [
                     CircleAvatar(
                       radius: 26,
-                      backgroundImage: user.avatarUrl != null && user.avatarUrl!.isNotEmpty
-                          ? NetworkImage(user.avatarUrl!)
-                          : null,
+                      backgroundImage:
+                          user.avatarUrl != null && user.avatarUrl!.isNotEmpty
+                              ? NetworkImage(user.avatarUrl!)
+                              : null,
                       child: user.avatarUrl == null || user.avatarUrl!.isEmpty
                           ? const Icon(Icons.person, size: 28)
                           : null,
@@ -152,15 +157,18 @@ class SettingsScreen extends ConsumerWidget {
                         children: [
                           Text(
                             user.fullName ?? user.username,
-                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                            style: const TextStyle(
+                                fontWeight: FontWeight.bold, fontSize: 16),
                           ),
                           Text(
                             '@${user.username}',
-                            style: const TextStyle(color: Colors.grey, fontSize: 13),
+                            style: const TextStyle(
+                                color: Colors.grey, fontSize: 13),
                           ),
                           Text(
                             user.email,
-                            style: const TextStyle(color: Colors.grey, fontSize: 12),
+                            style: const TextStyle(
+                                color: Colors.grey, fontSize: 12),
                           ),
                         ],
                       ),
@@ -176,7 +184,8 @@ class SettingsScreen extends ConsumerWidget {
               padding: EdgeInsets.all(AppTheme.spaceM),
               child: Text(
                 'Security & Access',
-                style: TextStyle(fontWeight: FontWeight.bold, color: AppTheme.primaryTeal),
+                style: TextStyle(
+                    fontWeight: FontWeight.bold, color: AppTheme.primaryTeal),
               ),
             ),
             ListTile(
@@ -185,14 +194,16 @@ class SettingsScreen extends ConsumerWidget {
               trailing: const Icon(Icons.chevron_right),
               onTap: () {
                 Navigator.of(context).push(
-                  MaterialPageRoute(builder: (context) => const ChangePasswordScreen()),
+                  MaterialPageRoute(
+                      builder: (context) => const ChangePasswordScreen()),
                 );
               },
             ),
             ListTile(
               leading: const Icon(Icons.verified_user_outlined),
               title: const Text('Email Verification Status'),
-              subtitle: Text(user?.isActive == true ? 'Verified' : 'Pending Verification'),
+              subtitle: Text(
+                  user?.isActive == true ? 'Verified' : 'Pending Verification'),
               trailing: user?.isActive == true
                   ? const Icon(Icons.check_circle, color: Colors.green)
                   : const Icon(Icons.warning, color: Colors.amber),
@@ -205,7 +216,8 @@ class SettingsScreen extends ConsumerWidget {
               padding: EdgeInsets.all(AppTheme.spaceM),
               child: Text(
                 'Preference Settings',
-                style: TextStyle(fontWeight: FontWeight.bold, color: AppTheme.primaryTeal),
+                style: TextStyle(
+                    fontWeight: FontWeight.bold, color: AppTheme.primaryTeal),
               ),
             ),
             ListTile(
@@ -227,7 +239,8 @@ class SettingsScreen extends ConsumerWidget {
               padding: EdgeInsets.all(AppTheme.spaceM),
               child: Text(
                 'Support & Legal',
-                style: TextStyle(fontWeight: FontWeight.bold, color: AppTheme.primaryTeal),
+                style: TextStyle(
+                    fontWeight: FontWeight.bold, color: AppTheme.primaryTeal),
               ),
             ),
             ListTile(
@@ -236,7 +249,8 @@ class SettingsScreen extends ConsumerWidget {
               trailing: const Icon(Icons.chevron_right),
               onTap: () {
                 Navigator.of(context).push(
-                  MaterialPageRoute(builder: (context) => const SupportScreen()),
+                  MaterialPageRoute(
+                      builder: (context) => const SupportScreen()),
                 );
               },
             ),
@@ -258,16 +272,19 @@ class SettingsScreen extends ConsumerWidget {
               padding: EdgeInsets.all(AppTheme.spaceM),
               child: Text(
                 'Danger Zone',
-                style: TextStyle(fontWeight: FontWeight.bold, color: Colors.red),
+                style:
+                    TextStyle(fontWeight: FontWeight.bold, color: Colors.red),
               ),
             ),
             ListTile(
-              leading: const Icon(Icons.power_settings_new, color: Colors.amber),
+              leading:
+                  const Icon(Icons.power_settings_new, color: Colors.amber),
               title: const Text('Deactivate Account'),
               textColor: Colors.amber.shade800,
               onTap: () {
                 Navigator.of(context).push(
-                  MaterialPageRoute(builder: (context) => const DeactivateAccountScreen()),
+                  MaterialPageRoute(
+                      builder: (context) => const DeactivateAccountScreen()),
                 );
               },
             ),
@@ -277,7 +294,8 @@ class SettingsScreen extends ConsumerWidget {
               textColor: Colors.red,
               onTap: () {
                 Navigator.of(context).push(
-                  MaterialPageRoute(builder: (context) => const DeleteAccountScreen()),
+                  MaterialPageRoute(
+                      builder: (context) => const DeleteAccountScreen()),
                 );
               },
             ),

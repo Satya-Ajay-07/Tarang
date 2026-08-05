@@ -39,7 +39,8 @@ class SecureStorageService {
   }
 
   Future<void> saveRememberMe(bool remember) async {
-    await _storage.write(key: AppConstants.rememberMeKey, value: remember.toString());
+    await _storage.write(
+        key: AppConstants.rememberMeKey, value: remember.toString());
   }
 
   Future<bool> getRememberMe() async {
@@ -48,12 +49,14 @@ class SecureStorageService {
   }
 
   Future<void> saveCredentials(String usernameOrEmail, String password) async {
-    await _storage.write(key: AppConstants.savedUsernameOrEmailKey, value: usernameOrEmail);
+    await _storage.write(
+        key: AppConstants.savedUsernameOrEmailKey, value: usernameOrEmail);
     await _storage.write(key: AppConstants.savedPasswordKey, value: password);
   }
 
   Future<Map<String, String?>> getCredentials() async {
-    final usernameOrEmail = await _storage.read(key: AppConstants.savedUsernameOrEmailKey);
+    final usernameOrEmail =
+        await _storage.read(key: AppConstants.savedUsernameOrEmailKey);
     final password = await _storage.read(key: AppConstants.savedPasswordKey);
     return {
       'usernameOrEmail': usernameOrEmail,

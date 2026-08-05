@@ -33,6 +33,7 @@ class ConnectivityService extends StateNotifier<ConnectionStatus> {
   }
 }
 
-final connectivityProvider = StateNotifierProvider<ConnectivityService, ConnectionStatus>((ref) {
+final connectivityProvider =
+    StateNotifierProvider<ConnectivityService, ConnectionStatus>((ref) {
   return ConnectivityService();
 });

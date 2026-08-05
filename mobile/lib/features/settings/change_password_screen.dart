@@ -7,7 +7,8 @@ class ChangePasswordScreen extends ConsumerStatefulWidget {
   const ChangePasswordScreen({super.key});
 
   @override
-  ConsumerState<ChangePasswordScreen> createState() => _ChangePasswordScreenState();
+  ConsumerState<ChangePasswordScreen> createState() =>
+      _ChangePasswordScreenState();
 }
 
 class _ChangePasswordScreenState extends ConsumerState<ChangePasswordScreen> {
@@ -32,7 +33,8 @@ class _ChangePasswordScreenState extends ConsumerState<ChangePasswordScreen> {
     if (password.length < 8) return 'Too Short (Min 8)';
     bool hasUppercase = password.contains(RegExp(r'[A-Z]'));
     bool hasDigits = password.contains(RegExp(r'[0-9]'));
-    bool hasSpecialCharacters = password.contains(RegExp(r'[!@#$%^&*(),.?":{}|<>]'));
+    bool hasSpecialCharacters =
+        password.contains(RegExp(r'[!@#$%^&*(),.?":{}|<>]'));
 
     int score = 0;
     if (hasUppercase) score++;
@@ -112,12 +114,16 @@ class _ChangePasswordScreenState extends ConsumerState<ChangePasswordScreen> {
                   labelText: 'Current Password',
                   border: const OutlineInputBorder(),
                   suffixIcon: IconButton(
-                    icon: Icon(_obscureCurrent ? Icons.visibility : Icons.visibility_off),
-                    onPressed: () => setState(() => _obscureCurrent = !_obscureCurrent),
+                    icon: Icon(_obscureCurrent
+                        ? Icons.visibility
+                        : Icons.visibility_off),
+                    onPressed: () =>
+                        setState(() => _obscureCurrent = !_obscureCurrent),
                   ),
                 ),
                 validator: (val) {
-                  if (val == null || val.isEmpty) return 'Enter current password';
+                  if (val == null || val.isEmpty)
+                    return 'Enter current password';
                   return null;
                 },
               ),
@@ -130,13 +136,15 @@ class _ChangePasswordScreenState extends ConsumerState<ChangePasswordScreen> {
                   labelText: 'New Password',
                   border: const OutlineInputBorder(),
                   suffixIcon: IconButton(
-                    icon: Icon(_obscureNew ? Icons.visibility : Icons.visibility_off),
+                    icon: Icon(
+                        _obscureNew ? Icons.visibility : Icons.visibility_off),
                     onPressed: () => setState(() => _obscureNew = !_obscureNew),
                   ),
                 ),
                 validator: (val) {
                   if (val == null || val.isEmpty) return 'Enter new password';
-                  if (val.length < 8) return 'Password must be at least 8 characters';
+                  if (val.length < 8)
+                    return 'Password must be at least 8 characters';
                   return null;
                 },
               ),
@@ -144,7 +152,8 @@ class _ChangePasswordScreenState extends ConsumerState<ChangePasswordScreen> {
                 const SizedBox(height: 4),
                 Row(
                   children: [
-                    const Text('Strength: ', style: TextStyle(fontSize: 12, color: Colors.grey)),
+                    const Text('Strength: ',
+                        style: TextStyle(fontSize: 12, color: Colors.grey)),
                     Text(
                       strength,
                       style: TextStyle(
@@ -164,8 +173,11 @@ class _ChangePasswordScreenState extends ConsumerState<ChangePasswordScreen> {
                   labelText: 'Confirm New Password',
                   border: const OutlineInputBorder(),
                   suffixIcon: IconButton(
-                    icon: Icon(_obscureConfirm ? Icons.visibility : Icons.visibility_off),
-                    onPressed: () => setState(() => _obscureConfirm = !_obscureConfirm),
+                    icon: Icon(_obscureConfirm
+                        ? Icons.visibility
+                        : Icons.visibility_off),
+                    onPressed: () =>
+                        setState(() => _obscureConfirm = !_obscureConfirm),
                   ),
                 ),
                 validator: (val) {

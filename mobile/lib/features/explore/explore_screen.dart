@@ -16,7 +16,8 @@ class ExploreScreen extends ConsumerStatefulWidget {
   ConsumerState<ExploreScreen> createState() => _ExploreScreenState();
 }
 
-class _ExploreScreenState extends ConsumerState<ExploreScreen> with SingleTickerProviderStateMixin {
+class _ExploreScreenState extends ConsumerState<ExploreScreen>
+    with SingleTickerProviderStateMixin {
   final _searchController = TextEditingController();
   final FocusNode _searchFocusNode = FocusNode();
   TabController? _tabController;
@@ -103,7 +104,8 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> with SingleTicker
               children: [
                 Text(
                   rider.fullName ?? rider.username,
-                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                  style: const TextStyle(
+                      fontWeight: FontWeight.bold, fontSize: 14),
                 ),
                 Text(
                   '@${rider.username}',
@@ -189,7 +191,8 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> with SingleTicker
             Text(state.errorMessage!),
             const SizedBox(height: AppTheme.spaceM),
             ElevatedButton(
-              onPressed: () => ref.read(exploreProvider.notifier).loadExploreData(),
+              onPressed: () =>
+                  ref.read(exploreProvider.notifier).loadExploreData(),
               child: const Text('Retry'),
             ),
           ],
@@ -213,7 +216,8 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> with SingleTicker
                   children: [
                     const Text(
                       '👥 Suggested Riders',
-                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                      style:
+                          TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
                     ),
                     const SizedBox(height: AppTheme.spaceM),
                     ...state.suggestedRiders.map(_buildSuggestedRiderRow),
@@ -232,7 +236,8 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> with SingleTicker
                   children: [
                     const Text(
                       '🏷 Trending Hashtags',
-                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                      style:
+                          TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
                     ),
                     const SizedBox(height: AppTheme.spaceS),
                     ...state.trendingHashtags.map(_buildTrendingHashtagTile),
@@ -265,13 +270,17 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> with SingleTicker
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: AppTheme.spaceM, vertical: AppTheme.spaceS),
+          padding: const EdgeInsets.symmetric(
+              horizontal: AppTheme.spaceM, vertical: AppTheme.spaceS),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text('Recent Searches', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.grey)),
+              const Text('Recent Searches',
+                  style: TextStyle(
+                      fontWeight: FontWeight.bold, color: Colors.grey)),
               TextButton(
-                onPressed: () => ref.read(searchProvider.notifier).clearRecentSearches(),
+                onPressed: () =>
+                    ref.read(searchProvider.notifier).clearRecentSearches(),
                 child: const Text('Clear All'),
               ),
             ],
@@ -334,14 +343,18 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> with SingleTicker
             if (searchState.people.isNotEmpty) ...[
               const Padding(
                 padding: EdgeInsets.all(AppTheme.spaceM),
-                child: Text('People', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.grey)),
+                child: Text('People',
+                    style: TextStyle(
+                        fontWeight: FontWeight.bold, color: Colors.grey)),
               ),
               ...searchState.people.map((u) => ListTile(
                     leading: CustomAvatar(url: u.avatarUrl),
                     title: Text(u.fullName ?? u.username),
                     subtitle: Text('@${u.username}'),
                     trailing: ElevatedButton(
-                      onPressed: () => ref.read(searchProvider.notifier).toggleRideSearchResult(u.id),
+                      onPressed: () => ref
+                          .read(searchProvider.notifier)
+                          .toggleRideSearchResult(u.id),
                       child: const Text('Ride'),
                     ),
                   )),
@@ -349,7 +362,9 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> with SingleTicker
             if (searchState.waves.isNotEmpty) ...[
               const Padding(
                 padding: EdgeInsets.all(AppTheme.spaceM),
-                child: Text('Waves', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.grey)),
+                child: Text('Waves',
+                    style: TextStyle(
+                        fontWeight: FontWeight.bold, color: Colors.grey)),
               ),
               ...searchState.waves.map((w) => WaveCard(wave: w)),
             ],
@@ -366,7 +381,9 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> with SingleTicker
               title: Text(u.fullName ?? u.username),
               subtitle: Text('@${u.username}'),
               trailing: ElevatedButton(
-                onPressed: () => ref.read(searchProvider.notifier).toggleRideSearchResult(u.id),
+                onPressed: () => ref
+                    .read(searchProvider.notifier)
+                    .toggleRideSearchResult(u.id),
                 child: const Text('Ride'),
               ),
             );
@@ -376,7 +393,8 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> with SingleTicker
         // Waves
         ListView.builder(
           itemCount: searchState.waves.length,
-          itemBuilder: (context, index) => WaveCard(wave: searchState.waves[index]),
+          itemBuilder: (context, index) =>
+              WaveCard(wave: searchState.waves[index]),
         ),
 
         // Hashtags Placeholder view (since search has no custom hashtags array, display suggestions)
@@ -460,7 +478,9 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> with SingleTicker
         child: _isSearchingActive
             ? Column(
                 children: [
-                  if (_searchController.text.trim().isNotEmpty && searchState.waves.isEmpty && searchState.people.isEmpty)
+                  if (_searchController.text.trim().isNotEmpty &&
+                      searchState.waves.isEmpty &&
+                      searchState.people.isEmpty)
                     _buildRecentSearches(searchState.recentSearches),
                   Expanded(child: _buildSearchResultsList()),
                 ],

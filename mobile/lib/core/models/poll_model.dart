@@ -116,5 +116,6 @@ class PollModel extends Equatable {
   }
 
   @override
-  List<Object?> get props => [id, question, expiresAt, options, totalVotes, hasVoted, votedOptionId];
+  List<Object?> get props =>
+      [id, question, expiresAt, options, totalVotes, hasVoted, votedOptionId];
 }

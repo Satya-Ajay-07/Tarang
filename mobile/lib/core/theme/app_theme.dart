@@ -5,11 +5,11 @@ class AppTheme {
   static const Color primaryTeal = Color(0xFF0D9488); // Teal 600
   static const Color primaryTealLight = Color(0xFF14B8A6); // Teal 500
   static const Color secondaryNavy = Color(0xFF0F172A); // Slate 900
-  
+
   static const Color lightBg = Color(0xFFF8FAFC); // Slate 50
   static const Color lightSurface = Colors.white;
   static const Color lightCard = Color(0xFFF1F5F9); // Slate 100
-  
+
   static const Color darkBg = Color(0xFF0B0F19); // Custom deep dark blue-grey
   static const Color darkSurface = Color(0xFF151D30);
   static const Color darkCard = Color(0xFF1E293B); // Slate 800

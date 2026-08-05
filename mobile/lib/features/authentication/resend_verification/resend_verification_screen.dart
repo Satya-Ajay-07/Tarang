@@ -12,10 +12,12 @@ class ResendVerificationScreen extends ConsumerStatefulWidget {
   const ResendVerificationScreen({super.key});
 
   @override
-  ConsumerState<ResendVerificationScreen> createState() => _ResendVerificationScreenState();
+  ConsumerState<ResendVerificationScreen> createState() =>
+      _ResendVerificationScreenState();
 }
 
-class _ResendVerificationScreenState extends ConsumerState<ResendVerificationScreen> {
+class _ResendVerificationScreenState
+    extends ConsumerState<ResendVerificationScreen> {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   bool _isLoading = false;
@@ -70,7 +72,8 @@ class _ResendVerificationScreenState extends ConsumerState<ResendVerificationScr
             AppDialogs.showSuccess(
               context: context,
               title: 'Verification Sent',
-              message: 'A new verification email has been sent to $email. Please check your inbox.',
+              message:
+                  'A new verification email has been sent to $email. Please check your inbox.',
             );
           }
         }

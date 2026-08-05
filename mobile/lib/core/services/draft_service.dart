@@ -8,7 +8,10 @@ class DraftService {
 
   static const _key = 'wave_composer_draft';
 
-  Future<void> saveDraft({required String content, List<String>? pollOptions, String? pollQuestion}) async {
+  Future<void> saveDraft(
+      {required String content,
+      List<String>? pollOptions,
+      String? pollQuestion}) async {
     final payload = {
       'content': content,
       'poll_options': pollOptions,

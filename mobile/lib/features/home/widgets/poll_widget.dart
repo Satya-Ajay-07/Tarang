@@ -54,13 +54,15 @@ class PollWidget extends ConsumerWidget {
                           value: percent / 100,
                           backgroundColor: Colors.transparent,
                           valueColor: AlwaysStoppedAnimation<Color>(
-                            AppTheme.primaryTeal.withValues(alpha: isMyVote ? 0.25 : 0.1),
+                            AppTheme.primaryTeal
+                                .withValues(alpha: isMyVote ? 0.25 : 0.1),
                           ),
                         ),
                       ),
                     ),
                     Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 10),
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
@@ -71,13 +73,16 @@ class PollWidget extends ConsumerWidget {
                                   child: Text(
                                     opt.text,
                                     style: TextStyle(
-                                      fontWeight: isMyVote ? FontWeight.bold : FontWeight.normal,
+                                      fontWeight: isMyVote
+                                          ? FontWeight.bold
+                                          : FontWeight.normal,
                                     ),
                                   ),
                                 ),
                                 if (isMyVote) ...[
                                   const SizedBox(width: 8),
-                                  const Icon(Icons.check_circle, size: 16, color: AppTheme.primaryTeal),
+                                  const Icon(Icons.check_circle,
+                                      size: 16, color: AppTheme.primaryTeal),
                                 ],
                               ],
                             ),
@@ -102,14 +107,16 @@ class PollWidget extends ConsumerWidget {
                   },
                   style: OutlinedButton.styleFrom(
                     alignment: Alignment.centerLeft,
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 12),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(AppTheme.radiusM),
                     ),
                   ),
                   child: Text(
                     opt.text,
-                    style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
+                    style: TextStyle(
+                        color: Theme.of(context).colorScheme.onSurface),
                   ),
                 ),
               );

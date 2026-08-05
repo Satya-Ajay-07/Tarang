@@ -54,12 +54,14 @@ class HashtagPage extends ConsumerWidget {
                     children: [
                       Text(
                         tag,
-                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+                        style: const TextStyle(
+                            fontWeight: FontWeight.bold, fontSize: 18),
                       ),
                       const SizedBox(height: 2),
                       Text(
                         '${state.waves.length} waves rolling',
-                        style: const TextStyle(color: Colors.grey, fontSize: 13),
+                        style:
+                            const TextStyle(color: Colors.grey, fontSize: 13),
                       ),
                     ],
                   ),
@@ -67,7 +69,7 @@ class HashtagPage extends ConsumerWidget {
               ),
             ),
             const Divider(height: 1),
-            
+
             // List of waves
             Expanded(
               child: state.isLoading && state.waves.isEmpty
@@ -77,7 +79,8 @@ class HashtagPage extends ConsumerWidget {
                           child: Column(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              const Icon(Icons.error_outline, size: 48, color: Colors.red),
+                              const Icon(Icons.error_outline,
+                                  size: 48, color: Colors.red),
                               const SizedBox(height: AppTheme.spaceM),
                               Text(state.errorMessage!),
                               const SizedBox(height: AppTheme.spaceM),
@@ -94,13 +97,19 @@ class HashtagPage extends ConsumerWidget {
                               child: ListView(
                                 physics: const AlwaysScrollableScrollPhysics(),
                                 children: [
-                                  SizedBox(height: MediaQuery.of(context).size.height * 0.2),
-                                  const Icon(Icons.waves, size: 64, color: Colors.grey),
+                                  SizedBox(
+                                      height:
+                                          MediaQuery.of(context).size.height *
+                                              0.2),
+                                  const Icon(Icons.waves,
+                                      size: 64, color: Colors.grey),
                                   const SizedBox(height: AppTheme.spaceM),
                                   const Text(
                                     'No Waves Yet',
                                     textAlign: TextAlign.center,
-                                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                                    style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 16),
                                   ),
                                   const SizedBox(height: AppTheme.spaceS),
                                   const Text(

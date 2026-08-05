@@ -54,13 +54,17 @@ class FeedNotifier extends StateNotifier<FeedState> {
 
   Future<void> loadFeed({bool refresh = false}) async {
     if (refresh) {
-      state = state.copyWith(status: FeedStatus.loading, skip: 0, hasMore: true);
+      state =
+          state.copyWith(status: FeedStatus.loading, skip: 0, hasMore: true);
     } else {
-      if (state.status == FeedStatus.loading || state.status == FeedStatus.loadingMore || !state.hasMore) {
+      if (state.status == FeedStatus.loading ||
+          state.status == FeedStatus.loadingMore ||
+          !state.hasMore) {
         return;
       }
       state = state.copyWith(
-        status: state.waves.isEmpty ? FeedStatus.loading : FeedStatus.loadingMore,
+        status:
+            state.waves.isEmpty ? FeedStatus.loading : FeedStatus.loadingMore,
       );
     }
 
@@ -71,7 +75,8 @@ class FeedNotifier extends StateNotifier<FeedState> {
         streamType: 'all',
       );
 
-      final newWaves = refresh ? fetchedWaves : [...state.waves, ...fetchedWaves];
+      final newWaves =
+          refresh ? fetchedWaves : [...state.waves, ...fetchedWaves];
       state = state.copyWith(
         status: FeedStatus.success,
         waves: newWaves,
@@ -94,7 +99,8 @@ class FeedNotifier extends StateNotifier<FeedState> {
     final target = state.waves[index];
     final newSpreadCount = target.spreadsCount + 1;
     final updatedWaves = [...state.waves];
-    updatedWaves[index] = target.copyWith(spreadsCount: newSpreadCount, spreadByMe: true);
+    updatedWaves[index] =
+        target.copyWith(spreadsCount: newSpreadCount, spreadByMe: true);
     state = state.copyWith(waves: updatedWaves);
 
     try {
@@ -209,7 +215,7 @@ class FeedNotifier extends StateNotifier<FeedState> {
 
     try {
       final updatedWave = await _waveRepository.votePoll(waveId, optionId);
-      
+
       // Update with exact server values
       final verifiedWaves = [...state.waves];
       final targetIndex = verifiedWaves.indexWhere((w) => w.id == waveId);

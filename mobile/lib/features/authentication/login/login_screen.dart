@@ -71,9 +71,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           message: next.errorMessage!,
         );
         ref.read(authProvider.notifier).clearError();
-      } else if (next.status == AuthStatus.deactivated && next.errorMessage != null) {
+      } else if (next.status == AuthStatus.deactivated &&
+          next.errorMessage != null) {
         final days = next.deactivationDaysRemaining;
-        final daysStr = days != null ? '\nRemaining cooldown: ${days.toStringAsFixed(1)} days.' : '';
+        final daysStr = days != null
+            ? '\nRemaining cooldown: ${days.toStringAsFixed(1)} days.'
+            : '';
         AppDialogs.showError(
           context: context,
           title: 'Account Deactivated',
@@ -108,7 +111,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   hintText: 'Enter your username or email',
                   controller: _usernameOrEmailController,
                   keyboardType: TextInputType.emailAddress,
-                  validator: (value) => Validators.validateRequired(value, 'Username or Email'),
+                  validator: (value) =>
+                      Validators.validateRequired(value, 'Username or Email'),
                 ),
                 const SizedBox(height: AppTheme.spaceM),
                 PasswordField(

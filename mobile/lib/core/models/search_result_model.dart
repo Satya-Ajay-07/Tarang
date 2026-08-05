@@ -49,7 +49,8 @@ class SearchResultModel extends Equatable {
               .toList() ??
           [],
       waves: (json['waves'] as List<dynamic>?)
-              ?.map((e) => WaveSearchResultModel.fromJson(e as Map<String, dynamic>))
+              ?.map((e) =>
+                  WaveSearchResultModel.fromJson(e as Map<String, dynamic>))
               .toList() ??
           [],
     );

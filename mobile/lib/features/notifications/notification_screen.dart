@@ -42,7 +42,8 @@ class NotificationScreen extends ConsumerWidget {
     }
   }
 
-  void _handleAlertTap(BuildContext context, WidgetRef ref, AlertModel alert) async {
+  void _handleAlertTap(
+      BuildContext context, WidgetRef ref, AlertModel alert) async {
     // Mark as read
     if (!alert.isRead) {
       ref.read(notificationProvider.notifier).markRead(alert.id);
@@ -77,7 +78,8 @@ class NotificationScreen extends ConsumerWidget {
       } catch (e) {
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('This original Wave is no longer available.')),
+            const SnackBar(
+                content: Text('This original Wave is no longer available.')),
           );
         }
       }
@@ -109,7 +111,8 @@ class NotificationScreen extends ConsumerWidget {
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        const Icon(Icons.cloud_off, size: 64, color: Colors.grey),
+                        const Icon(Icons.cloud_off,
+                            size: 64, color: Colors.grey),
                         const SizedBox(height: AppTheme.spaceM),
                         Text(state.errorMessage!),
                         const SizedBox(height: AppTheme.spaceM),
@@ -127,11 +130,13 @@ class NotificationScreen extends ConsumerWidget {
                           child: Column(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              Icon(Icons.notifications_none, size: 72, color: Colors.grey.shade400),
+                              Icon(Icons.notifications_none,
+                                  size: 72, color: Colors.grey.shade400),
                               const SizedBox(height: AppTheme.spaceM),
                               const Text(
                                 'Your Ocean is Calm',
-                                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+                                style: TextStyle(
+                                    fontWeight: FontWeight.bold, fontSize: 18),
                               ),
                               const SizedBox(height: AppTheme.spaceS),
                               const Text(
@@ -147,10 +152,13 @@ class NotificationScreen extends ConsumerWidget {
                         onRefresh: notifier.loadAlerts,
                         child: ListView.separated(
                           itemCount: state.alerts.length,
-                          separatorBuilder: (context, index) => const Divider(height: 1),
+                          separatorBuilder: (context, index) =>
+                              const Divider(height: 1),
                           itemBuilder: (context, index) {
                             final alert = state.alerts[index];
-                            final formattedTime = DateFormat.yMMMd().add_jm().format(alert.createdAt.toLocal());
+                            final formattedTime = DateFormat.yMMMd()
+                                .add_jm()
+                                .format(alert.createdAt.toLocal());
 
                             return Dismissible(
                               key: Key(alert.id),
@@ -158,8 +166,10 @@ class NotificationScreen extends ConsumerWidget {
                               background: Container(
                                 color: Colors.red,
                                 alignment: Alignment.centerRight,
-                                padding: const EdgeInsets.symmetric(horizontal: 20),
-                                child: const Icon(Icons.delete, color: Colors.white),
+                                padding:
+                                    const EdgeInsets.symmetric(horizontal: 20),
+                                child: const Icon(Icons.delete,
+                                    color: Colors.white),
                               ),
                               onDismissed: (direction) {
                                 notifier.deleteAlert(alert.id);
@@ -167,10 +177,13 @@ class NotificationScreen extends ConsumerWidget {
                               child: ListTile(
                                 tileColor: alert.isRead
                                     ? Colors.transparent
-                                    : AppTheme.primaryTeal.withValues(alpha: 0.05),
+                                    : AppTheme.primaryTeal
+                                        .withValues(alpha: 0.05),
                                 leading: Stack(
                                   children: [
-                                    CustomAvatar(url: alert.sender?.avatarUrl, radius: 22),
+                                    CustomAvatar(
+                                        url: alert.sender?.avatarUrl,
+                                        radius: 22),
                                     Positioned(
                                       bottom: 0,
                                       right: 0,
@@ -181,7 +194,8 @@ class NotificationScreen extends ConsumerWidget {
                                           shape: BoxShape.circle,
                                           boxShadow: [
                                             BoxShadow(
-                                              color: Colors.black.withValues(alpha: 0.1),
+                                              color: Colors.black
+                                                  .withValues(alpha: 0.1),
                                               blurRadius: 4,
                                             ),
                                           ],
@@ -201,15 +215,22 @@ class NotificationScreen extends ConsumerWidget {
                                       child: RichText(
                                         text: TextSpan(
                                           style: TextStyle(
-                                            color: Theme.of(context).colorScheme.onSurface,
+                                            color: Theme.of(context)
+                                                .colorScheme
+                                                .onSurface,
                                             fontSize: 14,
                                           ),
                                           children: [
                                             TextSpan(
-                                              text: alert.sender?.fullName ?? alert.sender?.username ?? 'System',
-                                              style: const TextStyle(fontWeight: FontWeight.bold),
+                                              text: alert.sender?.fullName ??
+                                                  alert.sender?.username ??
+                                                  'System',
+                                              style: const TextStyle(
+                                                  fontWeight: FontWeight.bold),
                                             ),
-                                            TextSpan(text: ' ${alert.content ?? ""}'),
+                                            TextSpan(
+                                                text:
+                                                    ' ${alert.content ?? ""}'),
                                           ],
                                         ),
                                       ),
@@ -229,10 +250,12 @@ class NotificationScreen extends ConsumerWidget {
                                   padding: const EdgeInsets.only(top: 4.0),
                                   child: Text(
                                     formattedTime,
-                                    style: const TextStyle(color: Colors.grey, fontSize: 11),
+                                    style: const TextStyle(
+                                        color: Colors.grey, fontSize: 11),
                                   ),
                                 ),
-                                onTap: () => _handleAlertTap(context, ref, alert),
+                                onTap: () =>
+                                    _handleAlertTap(context, ref, alert),
                               ),
                             );
                           },

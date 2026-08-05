@@ -30,7 +30,10 @@ class QuoteSpreadWidget extends StatelessWidget {
             Text(
               'This original Wave is no longer available.',
               style: TextStyle(
-                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                color: Theme.of(context)
+                    .colorScheme
+                    .onSurface
+                    .withValues(alpha: 0.6),
                 fontStyle: FontStyle.italic,
               ),
             ),
@@ -40,7 +43,8 @@ class QuoteSpreadWidget extends StatelessWidget {
     }
 
     final wave = originalWave!;
-    final formattedTime = DateFormat.yMMMd().add_jm().format(wave.createdAt.toLocal());
+    final formattedTime =
+        DateFormat.yMMMd().add_jm().format(wave.createdAt.toLocal());
 
     return Container(
       margin: const EdgeInsets.symmetric(vertical: AppTheme.spaceS),
@@ -68,7 +72,8 @@ class QuoteSpreadWidget extends StatelessWidget {
                         wave.creator.fullName ?? wave.creator.username,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                        style: const TextStyle(
+                            fontWeight: FontWeight.bold, fontSize: 13),
                       ),
                     ),
                     const SizedBox(width: 4),
@@ -77,7 +82,8 @@ class QuoteSpreadWidget extends StatelessWidget {
                         '@${wave.creator.username}',
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(color: Colors.grey, fontSize: 12),
+                        style:
+                            const TextStyle(color: Colors.grey, fontSize: 12),
                       ),
                     ),
                   ],

@@ -114,10 +114,11 @@ class ProfileNotifier extends StateNotifier<ProfileState> {
     state = state.copyWith(isLoading: true, errorMessage: null);
     try {
       final profile = await _userRepo.getUserProfile(_username);
-      
+
       // Fetch waves stream and filter locally by author username as in web app
       final allWaves = await _waveRepo.getWaves(skip: 0, limit: 100);
-      final filteredWaves = allWaves.where((w) => w.creator.username == _username).toList();
+      final filteredWaves =
+          allWaves.where((w) => w.creator.username == _username).toList();
 
       state = ProfileState(
         isLoading: false,
@@ -160,7 +161,7 @@ class ProfileNotifier extends StateNotifier<ProfileState> {
     try {
       final result = await _userRepo.toggleRide(state.id);
       final verifiedIsRiding = result['riding'] as bool;
-      
+
       // Sync with real backend verified state
       if (state.isRiding != verifiedIsRiding) {
         state = state.copyWith(
@@ -178,7 +179,9 @@ class ProfileNotifier extends StateNotifier<ProfileState> {
   }
 }
 
-final profileProvider = StateNotifierProvider.family<ProfileNotifier, ProfileState, String>((ref, username) {
+final profileProvider =
+    StateNotifierProvider.family<ProfileNotifier, ProfileState, String>(
+        (ref, username) {
   final userRepo = ref.watch(userRepositoryProvider);
   final waveRepo = ref.watch(waveRepositoryProvider);
   return ProfileNotifier(userRepo, waveRepo, username);
@@ -231,7 +234,8 @@ class EditProfileNotifier extends StateNotifier<EditProfileState> {
     String? avatarPath,
     String? bannerPath,
   }) async {
-    state = state.copyWith(isSubmitting: true, errorMessage: null, isSuccess: false);
+    state = state.copyWith(
+        isSubmitting: true, errorMessage: null, isSuccess: false);
     try {
       String? avatarUrl;
       String? coverUrl;
@@ -272,7 +276,8 @@ class EditProfileNotifier extends StateNotifier<EditProfileState> {
   }
 }
 
-final editProfileProvider = StateNotifierProvider<EditProfileNotifier, EditProfileState>((ref) {
+final editProfileProvider =
+    StateNotifierProvider<EditProfileNotifier, EditProfileState>((ref) {
   final userRepo = ref.watch(userRepositoryProvider);
   return EditProfileNotifier(userRepo);
 });
@@ -311,7 +316,8 @@ class FollowersNotifier extends StateNotifier<FollowListState> {
   final UserRepository _userRepo;
   final String _userId;
 
-  FollowersNotifier(this._userRepo, this._userId) : super(const FollowListState.initial()) {
+  FollowersNotifier(this._userRepo, this._userId)
+      : super(const FollowListState.initial()) {
     loadFollowers();
   }
 
@@ -330,7 +336,8 @@ class FollowingNotifier extends StateNotifier<FollowListState> {
   final UserRepository _userRepo;
   final String _userId;
 
-  FollowingNotifier(this._userRepo, this._userId) : super(const FollowListState.initial()) {
+  FollowingNotifier(this._userRepo, this._userId)
+      : super(const FollowListState.initial()) {
     loadFollowing();
   }
 
@@ -345,12 +352,16 @@ class FollowingNotifier extends StateNotifier<FollowListState> {
   }
 }
 
-final followersProvider = StateNotifierProvider.family<FollowersNotifier, FollowListState, String>((ref, userId) {
+final followersProvider =
+    StateNotifierProvider.family<FollowersNotifier, FollowListState, String>(
+        (ref, userId) {
   final userRepo = ref.watch(userRepositoryProvider);
   return FollowersNotifier(userRepo, userId);
 });
 
-final followingProvider = StateNotifierProvider.family<FollowingNotifier, FollowListState, String>((ref, userId) {
+final followingProvider =
+    StateNotifierProvider.family<FollowingNotifier, FollowListState, String>(
+        (ref, userId) {
   final userRepo = ref.watch(userRepositoryProvider);
   return FollowingNotifier(userRepo, userId);
 });

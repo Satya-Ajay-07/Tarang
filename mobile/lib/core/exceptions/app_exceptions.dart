@@ -17,23 +17,28 @@ class TimeoutException extends AppException {
 }
 
 class UnauthorizedException extends AppException {
-  UnauthorizedException(String message, [String? code]) : super(message, code ?? 'UNAUTHORIZED');
+  UnauthorizedException(String message, [String? code])
+      : super(message, code ?? 'UNAUTHORIZED');
 }
 
 class ForbiddenException extends AppException {
-  ForbiddenException(String message, [String? code]) : super(message, code ?? 'FORBIDDEN');
+  ForbiddenException(String message, [String? code])
+      : super(message, code ?? 'FORBIDDEN');
 }
 
 class NotFoundException extends AppException {
-  NotFoundException(String message, [String? code]) : super(message, code ?? 'NOT_FOUND');
+  NotFoundException(String message, [String? code])
+      : super(message, code ?? 'NOT_FOUND');
 }
 
 class BadRequestException extends AppException {
-  BadRequestException(String message, [String? code]) : super(message, code ?? 'BAD_REQUEST');
+  BadRequestException(String message, [String? code])
+      : super(message, code ?? 'BAD_REQUEST');
 }
 
 class EmailNotVerifiedException extends AppException {
-  EmailNotVerifiedException(String message) : super(message, 'EMAIL_NOT_VERIFIED');
+  EmailNotVerifiedException(String message)
+      : super(message, 'EMAIL_NOT_VERIFIED');
 }
 
 class AccountDeletedException extends AppException {

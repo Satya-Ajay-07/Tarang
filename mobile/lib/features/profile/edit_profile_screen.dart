@@ -19,7 +19,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
   final _fullNameController = TextEditingController();
   final _usernameController = TextEditingController();
   final _bioController = TextEditingController();
-  
+
   String? _selectedAvatarPath;
   String? _selectedBannerPath;
 
@@ -67,7 +67,8 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
     showModalBottomSheet(
       context: context,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(AppTheme.radiusM)),
+        borderRadius:
+            BorderRadius.vertical(top: Radius.circular(AppTheme.radiusM)),
       ),
       builder: (context) => SafeArea(
         child: Column(
@@ -158,7 +159,8 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      CircularProgressIndicator(value: editState.uploadProgress),
+                      CircularProgressIndicator(
+                          value: editState.uploadProgress),
                       const SizedBox(height: AppTheme.spaceM),
                       Text(
                         'Uploading media & saving profile details... ${(editState.uploadProgress * 100).toInt()}%',
@@ -185,14 +187,19 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                             fit: StackFit.expand,
                             children: [
                               if (_selectedBannerPath != null)
-                                Image.file(File(_selectedBannerPath!), fit: BoxFit.cover)
-                              else if (user.coverUrl != null && user.coverUrl!.isNotEmpty)
+                                Image.file(File(_selectedBannerPath!),
+                                    fit: BoxFit.cover)
+                              else if (user.coverUrl != null &&
+                                  user.coverUrl!.isNotEmpty)
                                 Image.network(user.coverUrl!, fit: BoxFit.cover)
                               else
-                                Container(color: AppTheme.primaryTeal.withValues(alpha: 0.15)),
+                                Container(
+                                    color: AppTheme.primaryTeal
+                                        .withValues(alpha: 0.15)),
                               Container(
                                 color: Colors.black.withValues(alpha: 0.3),
-                                child: const Icon(Icons.camera_alt, color: Colors.white, size: 36),
+                                child: const Icon(Icons.camera_alt,
+                                    color: Colors.white, size: 36),
                               ),
                             ],
                           ),
@@ -209,16 +216,19 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                                 onTap: () => _showImageSourceDialog(true),
                                 child: CircleAvatar(
                                   radius: 46,
-                                  backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+                                  backgroundColor:
+                                      Theme.of(context).scaffoldBackgroundColor,
                                   child: CircleAvatar(
                                     radius: 42,
                                     backgroundImage: _selectedAvatarPath != null
                                         ? FileImage(File(_selectedAvatarPath!))
-                                        : (user.avatarUrl != null && user.avatarUrl!.isNotEmpty
+                                        : (user.avatarUrl != null &&
+                                                user.avatarUrl!.isNotEmpty
                                             ? NetworkImage(user.avatarUrl!)
                                             : null) as ImageProvider?,
                                     child: _selectedAvatarPath == null &&
-                                            (user.avatarUrl == null || user.avatarUrl!.isEmpty)
+                                            (user.avatarUrl == null ||
+                                                user.avatarUrl!.isEmpty)
                                         ? const Icon(Icons.person, size: 40)
                                         : null,
                                   ),
@@ -231,8 +241,10 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                                   radius: 14,
                                   backgroundColor: AppTheme.primaryTeal,
                                   child: IconButton(
-                                    icon: const Icon(Icons.camera_alt, size: 12, color: Colors.white),
-                                    onPressed: () => _showImageSourceDialog(true),
+                                    icon: const Icon(Icons.camera_alt,
+                                        size: 12, color: Colors.white),
+                                    onPressed: () =>
+                                        _showImageSourceDialog(true),
                                   ),
                                 ),
                               ),
@@ -243,15 +255,18 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
 
                       // Text input fields
                       Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: AppTheme.spaceM),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: AppTheme.spaceM),
                         child: Column(
                           children: [
                             if (editState.errorMessage != null)
                               Padding(
-                                padding: const EdgeInsets.only(bottom: AppTheme.spaceM),
+                                padding: const EdgeInsets.only(
+                                    bottom: AppTheme.spaceM),
                                 child: Text(
                                   editState.errorMessage!,
-                                  style: const TextStyle(color: Colors.red, fontSize: 13),
+                                  style: const TextStyle(
+                                      color: Colors.red, fontSize: 13),
                                 ),
                               ),
                             TextFormField(

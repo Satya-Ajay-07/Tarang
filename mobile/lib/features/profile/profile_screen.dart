@@ -22,7 +22,8 @@ class ProfileScreen extends ConsumerStatefulWidget {
   ConsumerState<ProfileScreen> createState() => _ProfileScreenState();
 }
 
-class _ProfileScreenState extends ConsumerState<ProfileScreen> with SingleTickerProviderStateMixin {
+class _ProfileScreenState extends ConsumerState<ProfileScreen>
+    with SingleTickerProviderStateMixin {
   TabController? _tabController;
 
   @override
@@ -94,10 +95,12 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> with SingleTicker
               background: Stack(
                 fit: StackFit.expand,
                 children: [
-                  if (profileState.coverUrl != null && profileState.coverUrl!.isNotEmpty)
+                  if (profileState.coverUrl != null &&
+                      profileState.coverUrl!.isNotEmpty)
                     Image.network(profileState.coverUrl!, fit: BoxFit.cover)
                   else
-                    Container(color: AppTheme.primaryTeal.withValues(alpha: 0.2)),
+                    Container(
+                        color: AppTheme.primaryTeal.withValues(alpha: 0.2)),
                   Container(
                     decoration: const BoxDecoration(
                       gradient: LinearGradient(
@@ -145,8 +148,10 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> with SingleTicker
                           tag: 'avatar-${profileState.username}',
                           child: CircleAvatar(
                             radius: 40,
-                            backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-                            child: CustomAvatar(url: profileState.avatarUrl, radius: 36),
+                            backgroundColor:
+                                Theme.of(context).scaffoldBackgroundColor,
+                            child: CustomAvatar(
+                                url: profileState.avatarUrl, radius: 36),
                           ),
                         ),
                       ),
@@ -155,9 +160,11 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> with SingleTicker
                         child: isMe
                             ? OutlinedButton(
                                 onPressed: () async {
-                                  final updated = await Navigator.of(context).push(
+                                  final updated =
+                                      await Navigator.of(context).push(
                                     MaterialPageRoute(
-                                      builder: (context) => const EditProfileScreen(),
+                                      builder: (context) =>
+                                          const EditProfileScreen(),
                                     ),
                                   );
                                   if (updated == true) {
@@ -170,7 +177,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> with SingleTicker
                                 children: [
                                   IconButton(
                                     icon: const Icon(Icons.mail_outline),
-                                    onPressed: null, // Disabled Message placeholder
+                                    onPressed:
+                                        null, // Disabled Message placeholder
                                   ),
                                   const SizedBox(width: 8),
                                   ElevatedButton(
@@ -183,7 +191,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> with SingleTicker
                                           ? Colors.black87
                                           : Colors.white,
                                     ),
-                                    child: Text(profileState.isRiding ? 'Riding' : 'Ride'),
+                                    child: Text(profileState.isRiding
+                                        ? 'Riding'
+                                        : 'Ride'),
                                   ),
                                 ],
                               ),
@@ -194,29 +204,39 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> with SingleTicker
                   // Profile names & metadata
                   Text(
                     profileState.fullName ?? profileState.username,
-                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 20),
+                    style: const TextStyle(
+                        fontWeight: FontWeight.bold, fontSize: 20),
                   ),
                   Text(
                     '@${profileState.username}',
                     style: const TextStyle(color: Colors.grey, fontSize: 14),
                   ),
                   const SizedBox(height: AppTheme.spaceS),
-                  if (profileState.bio != null && profileState.bio!.isNotEmpty) ...[
-                    Text(profileState.bio!, style: const TextStyle(fontSize: 14, height: 1.3)),
+                  if (profileState.bio != null &&
+                      profileState.bio!.isNotEmpty) ...[
+                    Text(profileState.bio!,
+                        style: const TextStyle(fontSize: 14, height: 1.3)),
                     const SizedBox(height: AppTheme.spaceS),
                   ],
 
                   // Details rows (website, location, join date)
                   Row(
                     children: [
-                      const Icon(Icons.calendar_today, size: 14, color: Colors.grey),
+                      const Icon(Icons.calendar_today,
+                          size: 14, color: Colors.grey),
                       const SizedBox(width: 4),
-                      Text(formattedJoinDate, style: const TextStyle(color: Colors.grey, fontSize: 13)),
-                      if (profileState.location != null && profileState.location!.isNotEmpty) ...[
+                      Text(formattedJoinDate,
+                          style: const TextStyle(
+                              color: Colors.grey, fontSize: 13)),
+                      if (profileState.location != null &&
+                          profileState.location!.isNotEmpty) ...[
                         const SizedBox(width: AppTheme.spaceM),
-                        const Icon(Icons.location_on_outlined, size: 14, color: Colors.grey),
+                        const Icon(Icons.location_on_outlined,
+                            size: 14, color: Colors.grey),
                         const SizedBox(width: 4),
-                        Text(profileState.location!, style: const TextStyle(color: Colors.grey, fontSize: 13)),
+                        Text(profileState.location!,
+                            style: const TextStyle(
+                                color: Colors.grey, fontSize: 13)),
                       ],
                     ],
                   ),
@@ -241,10 +261,12 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> with SingleTicker
                           children: [
                             Text(
                               '${profileState.ridingCount}',
-                              style: const TextStyle(fontWeight: FontWeight.bold),
+                              style:
+                                  const TextStyle(fontWeight: FontWeight.bold),
                             ),
                             const SizedBox(width: 4),
-                            const Text('Following', style: TextStyle(color: Colors.grey)),
+                            const Text('Following',
+                                style: TextStyle(color: Colors.grey)),
                           ],
                         ),
                       ),
@@ -265,10 +287,12 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> with SingleTicker
                           children: [
                             Text(
                               '${profileState.ridersCount}',
-                              style: const TextStyle(fontWeight: FontWeight.bold),
+                              style:
+                                  const TextStyle(fontWeight: FontWeight.bold),
                             ),
                             const SizedBox(width: 4),
-                            const Text('Riders', style: TextStyle(color: Colors.grey)),
+                            const Text('Riders',
+                                style: TextStyle(color: Colors.grey)),
                           ],
                         ),
                       ),
@@ -304,13 +328,15 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> with SingleTicker
               child: profileState.waves.isEmpty
                   ? ListView(
                       children: [
-                        SizedBox(height: MediaQuery.of(context).size.height * 0.15),
+                        SizedBox(
+                            height: MediaQuery.of(context).size.height * 0.15),
                         const Icon(Icons.waves, size: 64, color: Colors.grey),
                         const SizedBox(height: AppTheme.spaceM),
                         const Text(
                           'No Waves Yet',
                           textAlign: TextAlign.center,
-                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                          style: TextStyle(
+                              fontWeight: FontWeight.bold, fontSize: 16),
                         ),
                         const SizedBox(height: AppTheme.spaceS),
                         const Text(
@@ -334,7 +360,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> with SingleTicker
               padding: const EdgeInsets.all(AppTheme.spaceM),
               children: [
                 SizedBox(height: MediaQuery.of(context).size.height * 0.15),
-                const Icon(Icons.chat_bubble_outline, size: 64, color: Colors.grey),
+                const Icon(Icons.chat_bubble_outline,
+                    size: 64, color: Colors.grey),
                 const SizedBox(height: AppTheme.spaceM),
                 const Text(
                   'Replies screen coming soon',
@@ -361,7 +388,8 @@ class _SliverAppBarDelegate extends SliverPersistentHeaderDelegate {
   double get maxExtent => _tabBar.preferredSize.height;
 
   @override
-  Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
+  Widget build(
+      BuildContext context, double shrinkOffset, bool overlapsContent) {
     return Container(
       color: Theme.of(context).scaffoldBackgroundColor,
       child: _tabBar,

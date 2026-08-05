@@ -7,10 +7,12 @@ class DeactivateAccountScreen extends ConsumerStatefulWidget {
   const DeactivateAccountScreen({super.key});
 
   @override
-  ConsumerState<DeactivateAccountScreen> createState() => _DeactivateAccountScreenState();
+  ConsumerState<DeactivateAccountScreen> createState() =>
+      _DeactivateAccountScreenState();
 }
 
-class _DeactivateAccountScreenState extends ConsumerState<DeactivateAccountScreen> {
+class _DeactivateAccountScreenState
+    extends ConsumerState<DeactivateAccountScreen> {
   final _formKey = GlobalKey<FormState>();
   final _passwordController = TextEditingController();
   bool _obscureText = true;
@@ -38,14 +40,17 @@ class _DeactivateAccountScreenState extends ConsumerState<DeactivateAccountScree
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('Deactivate', style: TextStyle(color: Colors.amber)),
+            child:
+                const Text('Deactivate', style: TextStyle(color: Colors.amber)),
           ),
         ],
       ),
     );
 
     if (confirm == true) {
-      await ref.read(settingsProvider.notifier).deactivateAccount(_passwordController.text);
+      await ref
+          .read(settingsProvider.notifier)
+          .deactivateAccount(_passwordController.text);
       // Auth provider redirect handles navigation to Login automatically on logout
     }
   }
@@ -73,7 +78,10 @@ class _DeactivateAccountScreenState extends ConsumerState<DeactivateAccountScree
                     children: [
                       Text(
                         '⚠️ Important Deactivation Notice',
-                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Colors.amber),
+                        style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 15,
+                            color: Colors.amber),
                       ),
                       SizedBox(height: AppTheme.spaceS),
                       Text(
@@ -102,12 +110,15 @@ class _DeactivateAccountScreenState extends ConsumerState<DeactivateAccountScree
                   labelText: 'Confirm Password',
                   border: const OutlineInputBorder(),
                   suffixIcon: IconButton(
-                    icon: Icon(_obscureText ? Icons.visibility : Icons.visibility_off),
-                    onPressed: () => setState(() => _obscureText = !_obscureText),
+                    icon: Icon(
+                        _obscureText ? Icons.visibility : Icons.visibility_off),
+                    onPressed: () =>
+                        setState(() => _obscureText = !_obscureText),
                   ),
                 ),
                 validator: (val) {
-                  if (val == null || val.isEmpty) return 'Please enter your password to confirm';
+                  if (val == null || val.isEmpty)
+                    return 'Please enter your password to confirm';
                   return null;
                 },
               ),

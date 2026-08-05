@@ -37,7 +37,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   }
 
   void _onScroll() {
-    if (_scrollController.position.pixels >= _scrollController.position.maxScrollExtent - 200) {
+    if (_scrollController.position.pixels >=
+        _scrollController.position.maxScrollExtent - 200) {
       ref.read(feedProvider.notifier).loadFeed();
     }
   }
@@ -51,7 +52,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         itemCount: 6,
         padding: const EdgeInsets.symmetric(vertical: AppTheme.spaceS),
         itemBuilder: (context, index) => const Padding(
-          padding: EdgeInsets.symmetric(horizontal: AppTheme.spaceM, vertical: AppTheme.spaceS),
+          padding: EdgeInsets.symmetric(
+              horizontal: AppTheme.spaceM, vertical: AppTheme.spaceS),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -104,13 +106,15 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               ),
               const SizedBox(height: AppTheme.spaceS),
               Text(
-                feedState.errorMessage ?? 'Please verify your internet connection.',
+                feedState.errorMessage ??
+                    'Please verify your internet connection.',
                 textAlign: TextAlign.center,
                 style: const TextStyle(color: Colors.grey),
               ),
               const SizedBox(height: AppTheme.spaceL),
               ElevatedButton(
-                onPressed: () => ref.read(feedProvider.notifier).loadFeed(refresh: true),
+                onPressed: () =>
+                    ref.read(feedProvider.notifier).loadFeed(refresh: true),
                 child: const Text('Try Again'),
               ),
             ],
@@ -121,7 +125,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
     if (feedState.waves.isEmpty) {
       return RefreshIndicator(
-        onRefresh: () => ref.read(feedProvider.notifier).loadFeed(refresh: true),
+        onRefresh: () =>
+            ref.read(feedProvider.notifier).loadFeed(refresh: true),
         child: ListView(
           physics: const AlwaysScrollableScrollPhysics(),
           children: [
@@ -175,7 +180,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final tabs = [
       _buildHomeFeed(),
       const ExploreScreen(),
-      const SizedBox.shrink(), // Compose placeholder (never rendered, opens compose screen)
+      const SizedBox
+          .shrink(), // Compose placeholder (never rendered, opens compose screen)
       const NotificationScreen(),
       user == null
           ? const Center(child: CircularProgressIndicator())
@@ -210,7 +216,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               final confirm = await AppDialogs.showConfirmation(
                 context: context,
                 title: 'Log Out',
-                message: 'Are you sure you want to log out of your Tarang session?',
+                message:
+                    'Are you sure you want to log out of your Tarang session?',
                 confirmText: 'Log Out',
               );
               if (confirm == true) {
@@ -280,5 +287,4 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       ),
     );
   }
-
 }

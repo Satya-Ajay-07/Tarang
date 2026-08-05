@@ -84,7 +84,9 @@ class _VerifyEmailScreenState extends ConsumerState<VerifyEmailScreen> {
                 ),
                 const SizedBox(height: AppTheme.spaceM),
                 Text(
-                  _isSuccess ? 'Verification Successful!' : 'Verification Failed',
+                  _isSuccess
+                      ? 'Verification Successful!'
+                      : 'Verification Failed',
                   textAlign: TextAlign.center,
                   style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                         fontWeight: FontWeight.bold,

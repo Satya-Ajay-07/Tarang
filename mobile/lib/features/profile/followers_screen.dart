@@ -35,14 +35,19 @@ class FollowListScreen extends ConsumerWidget {
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        const Icon(Icons.cloud_off, size: 64, color: Colors.grey),
+                        const Icon(Icons.cloud_off,
+                            size: 64, color: Colors.grey),
                         const SizedBox(height: AppTheme.spaceM),
                         Text(state.errorMessage!),
                         const SizedBox(height: AppTheme.spaceM),
                         ElevatedButton(
                           onPressed: isFollowersTab
-                              ? () => ref.read(followersProvider(userId).notifier).loadFollowers()
-                              : () => ref.read(followingProvider(userId).notifier).loadFollowing(),
+                              ? () => ref
+                                  .read(followersProvider(userId).notifier)
+                                  .loadFollowers()
+                              : () => ref
+                                  .read(followingProvider(userId).notifier)
+                                  .loadFollowing(),
                           child: const Text('Retry'),
                         ),
                       ],
@@ -55,12 +60,17 @@ class FollowListScreen extends ConsumerWidget {
                           child: Column(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              const Icon(Icons.people_outline, size: 64, color: Colors.grey),
+                              const Icon(Icons.people_outline,
+                                  size: 64, color: Colors.grey),
                               const SizedBox(height: AppTheme.spaceM),
                               Text(
-                                isFollowersTab ? 'No riders follow this user yet' : 'This user is not riding with anyone yet',
+                                isFollowersTab
+                                    ? 'No riders follow this user yet'
+                                    : 'This user is not riding with anyone yet',
                                 textAlign: TextAlign.center,
-                                style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.grey),
+                                style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.grey),
                               ),
                             ],
                           ),
@@ -69,9 +79,13 @@ class FollowListScreen extends ConsumerWidget {
                     : RefreshIndicator(
                         onRefresh: () async {
                           if (isFollowersTab) {
-                            await ref.read(followersProvider(userId).notifier).loadFollowers();
+                            await ref
+                                .read(followersProvider(userId).notifier)
+                                .loadFollowers();
                           } else {
-                            await ref.read(followingProvider(userId).notifier).loadFollowing();
+                            await ref
+                                .read(followingProvider(userId).notifier)
+                                .loadFollowing();
                           }
                         },
                         child: ListView.builder(
@@ -85,7 +99,8 @@ class FollowListScreen extends ConsumerWidget {
                               onTap: () {
                                 Navigator.of(context).push(
                                   MaterialPageRoute(
-                                    builder: (context) => ProfileScreen(username: u.username),
+                                    builder: (context) =>
+                                        ProfileScreen(username: u.username),
                                   ),
                                 );
                               },

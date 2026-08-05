@@ -86,7 +86,9 @@ class UserRepositoryImpl implements UserRepository {
     try {
       final response = await _apiClient.dio.get('/users/$userId/riders');
       final list = response.data as List<dynamic>;
-      return list.map((e) => UserModel.fromJson(e as Map<String, dynamic>)).toList();
+      return list
+          .map((e) => UserModel.fromJson(e as Map<String, dynamic>))
+          .toList();
     } on DioException catch (e) {
       throw _apiClient.handleError(e);
     }
@@ -97,7 +99,9 @@ class UserRepositoryImpl implements UserRepository {
     try {
       final response = await _apiClient.dio.get('/users/$userId/riding');
       final list = response.data as List<dynamic>;
-      return list.map((e) => UserModel.fromJson(e as Map<String, dynamic>)).toList();
+      return list
+          .map((e) => UserModel.fromJson(e as Map<String, dynamic>))
+          .toList();
     } on DioException catch (e) {
       throw _apiClient.handleError(e);
     }
@@ -114,7 +118,8 @@ class UserRepositoryImpl implements UserRepository {
   }
 
   @override
-  Future<void> changePassword(String currentPassword, String newPassword) async {
+  Future<void> changePassword(
+      String currentPassword, String newPassword) async {
     try {
       await _apiClient.dio.post(
         '/users/change-password',

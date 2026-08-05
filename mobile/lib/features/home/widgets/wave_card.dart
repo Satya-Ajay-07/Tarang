@@ -81,13 +81,15 @@ class WaveCard extends ConsumerWidget {
     );
   }
 
-  void _showMoreMenu(BuildContext context, WidgetRef ref, String currentUserId) {
+  void _showMoreMenu(
+      BuildContext context, WidgetRef ref, String currentUserId) {
     final isOwner = wave.creatorId == currentUserId;
 
     showModalBottomSheet(
       context: context,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(AppTheme.radiusL)),
+        borderRadius:
+            BorderRadius.vertical(top: Radius.circular(AppTheme.radiusL)),
       ),
       builder: (context) => SafeArea(
         child: Column(
@@ -102,7 +104,8 @@ class WaveCard extends ConsumerWidget {
                 ));
                 context.pop();
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Wave link copied to clipboard')),
+                  const SnackBar(
+                      content: Text('Wave link copied to clipboard')),
                 );
               },
             ),
@@ -123,7 +126,8 @@ class WaveCard extends ConsumerWidget {
                   final confirm = await AppDialogs.showConfirmation(
                     context: context,
                     title: 'Delete Wave',
-                    message: 'Are you sure you want to permanently delete this Wave?',
+                    message:
+                        'Are you sure you want to permanently delete this Wave?',
                     confirmText: 'Delete',
                   );
                   if (confirm == true) {
@@ -148,7 +152,8 @@ class WaveCard extends ConsumerWidget {
     showModalBottomSheet(
       context: context,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(AppTheme.radiusL)),
+        borderRadius:
+            BorderRadius.vertical(top: Radius.circular(AppTheme.radiusL)),
       ),
       builder: (context) => SafeArea(
         child: Column(
@@ -179,11 +184,15 @@ class WaveCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final currentUserId = ref.read(authProvider).user?.id ?? '';
-    final isSpread = wave.spreadFromId != null && (wave.content == null || wave.content!.isEmpty);
-    
+    final isSpread = wave.spreadFromId != null &&
+        (wave.content == null || wave.content!.isEmpty);
+
     // Determine target display wave (reposted wave details)
-    final displayWave = isSpread && wave.spreadFrom != null ? wave.spreadFrom! : wave;
-    final isQuoteSpread = displayWave.spreadFromId != null && displayWave.content != null && displayWave.content!.isNotEmpty;
+    final displayWave =
+        isSpread && wave.spreadFrom != null ? wave.spreadFrom! : wave;
+    final isQuoteSpread = displayWave.spreadFromId != null &&
+        displayWave.content != null &&
+        displayWave.content!.isNotEmpty;
 
     // Time calculations
     final difference = DateTime.now().difference(displayWave.createdAt);
@@ -196,7 +205,8 @@ class WaveCard extends ConsumerWidget {
     }
 
     return Card(
-      margin: const EdgeInsets.symmetric(horizontal: AppTheme.spaceM, vertical: AppTheme.spaceS),
+      margin: const EdgeInsets.symmetric(
+          horizontal: AppTheme.spaceM, vertical: AppTheme.spaceS),
       child: Padding(
         padding: const EdgeInsets.all(AppTheme.spaceM),
         child: Column(
@@ -232,7 +242,8 @@ class WaveCard extends ConsumerWidget {
                       ),
                     );
                   },
-                  child: CustomAvatar(url: displayWave.creator.avatarUrl, radius: 20),
+                  child: CustomAvatar(
+                      url: displayWave.creator.avatarUrl, radius: 20),
                 ),
                 const SizedBox(width: AppTheme.spaceS),
                 Expanded(
@@ -253,10 +264,12 @@ class WaveCard extends ConsumerWidget {
                           children: [
                             Flexible(
                               child: Text(
-                                displayWave.creator.fullName ?? displayWave.creator.username,
+                                displayWave.creator.fullName ??
+                                    displayWave.creator.username,
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                                style: const TextStyle(
+                                    fontWeight: FontWeight.bold, fontSize: 14),
                               ),
                             ),
                             const SizedBox(width: 4),
@@ -265,24 +278,32 @@ class WaveCard extends ConsumerWidget {
                                 '@${displayWave.creator.username}',
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(color: Colors.grey, fontSize: 13),
+                                style: const TextStyle(
+                                    color: Colors.grey, fontSize: 13),
                               ),
                             ),
                             const SizedBox(width: 4),
-                            const Text('•', style: TextStyle(color: Colors.grey)),
+                            const Text('•',
+                                style: TextStyle(color: Colors.grey)),
                             const SizedBox(width: 4),
-                            Text(timeAgo, style: const TextStyle(color: Colors.grey, fontSize: 13)),
+                            Text(timeAgo,
+                                style: const TextStyle(
+                                    color: Colors.grey, fontSize: 13)),
                             if (displayWave.isEdited) ...[
                               const SizedBox(width: 4),
                               Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 4, vertical: 2),
                                 decoration: BoxDecoration(
                                   color: Colors.grey.shade200,
                                   borderRadius: BorderRadius.circular(4),
                                 ),
                                 child: const Text(
                                   'Edited',
-                                  style: TextStyle(fontSize: 9, color: Colors.grey, fontWeight: FontWeight.bold),
+                                  style: TextStyle(
+                                      fontSize: 9,
+                                      color: Colors.grey,
+                                      fontWeight: FontWeight.bold),
                                 ),
                               ),
                             ],
@@ -306,9 +327,10 @@ class WaveCard extends ConsumerWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   _buildContent(context),
-                  
+
                   // Media attachment placeholder
-                  if (displayWave.mediaUrl != null && displayWave.mediaUrl!.isNotEmpty) ...[
+                  if (displayWave.mediaUrl != null &&
+                      displayWave.mediaUrl!.isNotEmpty) ...[
                     const SizedBox(height: AppTheme.spaceS),
                     ClipRRect(
                       borderRadius: BorderRadius.circular(AppTheme.radiusM),
@@ -321,7 +343,8 @@ class WaveCard extends ConsumerWidget {
                           return Container(
                             height: 100,
                             color: Colors.grey.shade200,
-                            child: const Icon(Icons.broken_image, color: Colors.grey),
+                            child: const Icon(Icons.broken_image,
+                                color: Colors.grey),
                           );
                         },
                       ),
@@ -353,7 +376,8 @@ class WaveCard extends ConsumerWidget {
                             MaterialPageRoute(
                               builder: (context) => Scaffold(
                                 appBar: AppBar(title: const Text('Replies')),
-                                body: const Center(child: Text('Wave Replies (Placeholder)')),
+                                body: const Center(
+                                    child: Text('Wave Replies (Placeholder)')),
                               ),
                             ),
                           );
@@ -371,26 +395,37 @@ class WaveCard extends ConsumerWidget {
                       ),
                       // Ripple (Like) button
                       _buildActionButton(
-                        icon: displayWave.rippledByMe ? Icons.favorite : Icons.favorite_border,
+                        icon: displayWave.rippledByMe
+                            ? Icons.favorite
+                            : Icons.favorite_border,
                         count: displayWave.ripplesCount,
                         color: displayWave.rippledByMe ? Colors.red : null,
                         onPressed: () {
                           HapticService.light();
-                          ref.read(feedProvider.notifier).toggleRipple(displayWave.id);
+                          ref
+                              .read(feedProvider.notifier)
+                              .toggleRipple(displayWave.id);
                         },
                       ),
                       // Bookmark button
                       _buildActionButton(
-                        icon: displayWave.bookmarkedByMe ? Icons.bookmark : Icons.bookmark_border,
-                        color: displayWave.bookmarkedByMe ? AppTheme.primaryTeal : null,
+                        icon: displayWave.bookmarkedByMe
+                            ? Icons.bookmark
+                            : Icons.bookmark_border,
+                        color: displayWave.bookmarkedByMe
+                            ? AppTheme.primaryTeal
+                            : null,
                         onPressed: () {
                           HapticService.light();
-                          ref.read(feedProvider.notifier).toggleBookmark(displayWave.id);
+                          ref
+                              .read(feedProvider.notifier)
+                              .toggleBookmark(displayWave.id);
                         },
                       ),
                       // Share button
                       IconButton(
-                        icon: const Icon(Icons.share_outlined, size: 20, color: Colors.grey),
+                        icon: const Icon(Icons.share_outlined,
+                            size: 20, color: Colors.grey),
                         onPressed: () {
                           HapticService.light();
                           Share.share(
@@ -431,7 +466,8 @@ class WaveCard extends ConsumerWidget {
                 style: TextStyle(
                   fontSize: 12,
                   color: color ?? Colors.grey,
-                  fontWeight: color != null ? FontWeight.bold : FontWeight.normal,
+                  fontWeight:
+                      color != null ? FontWeight.bold : FontWeight.normal,
                 ),
               ),
             ],

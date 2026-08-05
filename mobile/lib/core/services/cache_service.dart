@@ -6,7 +6,8 @@ class CacheService {
 
   const CacheService(this._storage);
 
-  Future<void> cacheData(String key, dynamic data, {Duration ttl = const Duration(hours: 2)}) async {
+  Future<void> cacheData(String key, dynamic data,
+      {Duration ttl = const Duration(hours: 2)}) async {
     final payload = {
       'cached_at': DateTime.now().toIso8601String(),
       'ttl_seconds': ttl.inSeconds,

@@ -21,7 +21,7 @@ class _SupportScreenState extends State<SupportScreen> {
 
   void _submit() {
     if (!_formKey.currentState!.validate()) return;
-    
+
     // Simulate support submission
     showDialog(
       context: context,
@@ -67,10 +67,13 @@ class _SupportScreenState extends State<SupportScreen> {
                   border: OutlineInputBorder(),
                 ),
                 items: const [
-                  DropdownMenuItem(value: 'Feedback', child: Text('Send Feedback')),
+                  DropdownMenuItem(
+                      value: 'Feedback', child: Text('Send Feedback')),
                   DropdownMenuItem(value: 'Bug', child: Text('Report a Bug')),
-                  DropdownMenuItem(value: 'Request', child: Text('Feature Request')),
-                  DropdownMenuItem(value: 'Account', child: Text('Account Security Issue')),
+                  DropdownMenuItem(
+                      value: 'Request', child: Text('Feature Request')),
+                  DropdownMenuItem(
+                      value: 'Account', child: Text('Account Security Issue')),
                 ],
                 onChanged: (val) {
                   if (val != null) {

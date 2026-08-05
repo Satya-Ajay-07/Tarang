@@ -12,7 +12,8 @@ class ResetPasswordScreen extends ConsumerStatefulWidget {
   const ResetPasswordScreen({super.key, required this.token});
 
   @override
-  ConsumerState<ResetPasswordScreen> createState() => _ResetPasswordScreenState();
+  ConsumerState<ResetPasswordScreen> createState() =>
+      _ResetPasswordScreenState();
 }
 
 class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
@@ -33,7 +34,8 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
       AppDialogs.showError(
         context: context,
         title: 'Error',
-        message: 'No reset token found. Please request a new password reset email.',
+        message:
+            'No reset token found. Please request a new password reset email.',
       );
       return;
     }
@@ -45,13 +47,15 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
 
       try {
         final repo = ref.read(authRepositoryProvider);
-        final success = await repo.resetPassword(widget.token, _passwordController.text);
+        final success =
+            await repo.resetPassword(widget.token, _passwordController.text);
 
         if (success && mounted) {
           AppDialogs.showSuccess(
             context: context,
             title: 'Password Updated',
-            message: 'Your password has been reset successfully. Please log in with your new password.',
+            message:
+                'Your password has been reset successfully. Please log in with your new password.',
             onConfirm: () => context.go('/login'),
           );
         }

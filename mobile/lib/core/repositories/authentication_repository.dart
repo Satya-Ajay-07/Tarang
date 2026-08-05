@@ -64,7 +64,8 @@ class AuthenticationRepositoryImpl implements AuthenticationRepository {
           if (phoneNumber != null) 'phone_number': phoneNumber,
         },
       );
-      return RegisterResponseModel.fromJson(response.data as Map<String, dynamic>);
+      return RegisterResponseModel.fromJson(
+          response.data as Map<String, dynamic>);
     } on DioException catch (e) {
       throw _apiClient.handleError(e);
     }

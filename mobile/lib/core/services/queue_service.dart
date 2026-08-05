@@ -41,7 +41,9 @@ class QueueService {
       final value = await _storage.read(key: _key);
       if (value == null) return const [];
       final list = jsonDecode(value) as List<dynamic>;
-      return list.map((e) => QueueItem.fromJson(e as Map<String, dynamic>)).toList();
+      return list
+          .map((e) => QueueItem.fromJson(e as Map<String, dynamic>))
+          .toList();
     } catch (_) {
       return const [];
     }
@@ -55,7 +57,8 @@ class QueueService {
       params: params,
     );
     final updated = [...queue, item];
-    await _storage.write(key: _key, value: jsonEncode(updated.map((e) => e.toJson()).toList()));
+    await _storage.write(
+        key: _key, value: jsonEncode(updated.map((e) => e.toJson()).toList()));
   }
 
   Future<void> processQueue() async {
@@ -94,13 +97,17 @@ class QueueService {
       } catch (e) {
         // In case of permanent API errors (e.g. 404, 400), don't retry forever, discard.
         // Otherwise, keep in queue for next sync interval.
-        if (e.toString().contains('400') || e.toString().contains('404') || e.toString().contains('403')) {
+        if (e.toString().contains('400') ||
+            e.toString().contains('404') ||
+            e.toString().contains('403')) {
           continue; // Discard item
         }
         remaining.add(item);
       }
     }
 
-    await _storage.write(key: _key, value: jsonEncode(remaining.map((e) => e.toJson()).toList()));
+    await _storage.write(
+        key: _key,
+        value: jsonEncode(remaining.map((e) => e.toJson()).toList()));
   }
 }
