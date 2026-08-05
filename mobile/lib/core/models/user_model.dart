@@ -42,7 +42,7 @@ class UserModel extends Equatable {
   factory UserModel.fromJson(Map<String, dynamic> json) {
     return UserModel(
       id: json['id'] as String,
-      email: json['email'] as String,
+      email: json['email'] as String? ?? '',
       username: json['username'] as String,
       fullName: json['full_name'] as String?,
       country: json['country'] as String?,
@@ -50,7 +50,9 @@ class UserModel extends Equatable {
       coverUrl: json['cover_url'] as String?,
       bio: json['bio'] as String?,
       location: json['location'] as String?,
-      createdAt: DateTime.parse(json['created_at'] as String),
+      createdAt: json['created_at'] != null
+          ? DateTime.parse(json['created_at'] as String)
+          : DateTime.now(),
       role: json['role'] as String? ?? 'user',
       phoneNumber: json['phone_number'] as String?,
       website: json['website'] as String?,

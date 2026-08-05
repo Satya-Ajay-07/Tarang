@@ -65,13 +65,21 @@ class _ComposeScreenState extends ConsumerState<ComposeScreen> {
         setState(() {
           _shouldAllowPop = true;
         });
-        context.pop();
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) {
+            context.pop();
+          }
+        });
       }
     } else {
       setState(() {
         _shouldAllowPop = true;
       });
-      context.pop();
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          context.pop();
+        }
+      });
     }
   }
 
@@ -148,7 +156,14 @@ class _ComposeScreenState extends ConsumerState<ComposeScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(widget.editWave != null ? 'Wave saved' : 'Wave posted')),
         );
-        context.pop();
+        setState(() {
+          _shouldAllowPop = true;
+        });
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) {
+            context.pop();
+          }
+        });
       }
     } catch (e) {
       if (mounted) {
@@ -193,15 +208,26 @@ class _ComposeScreenState extends ConsumerState<ComposeScreen> {
                   : 'Compose Wave'),
           actions: [
             Padding(
-              padding: const EdgeInsets.only(right: 16.0),
-              child: UnconstrainedBox(
-                child: PrimaryButton(
-                  text: isEditing ? 'Save' : 'Post',
-                  onPressed: (_isLoading || (_textController.text.trim().isEmpty && widget.spreadFromWave == null))
-                      ? null
-                      : _handlePost,
-                  isLoading: _isLoading,
-                ),
+              padding: const EdgeInsets.only(right: 8.0),
+              child: TextButton(
+                onPressed: (_isLoading || (_textController.text.trim().isEmpty && widget.spreadFromWave == null))
+                    ? null
+                    : _handlePost,
+                child: _isLoading
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2, color: AppTheme.primaryTeal),
+                      )
+                    : Text(
+                        isEditing ? 'Save' : 'Post',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: (_textController.text.trim().isEmpty && widget.spreadFromWave == null)
+                              ? Colors.grey
+                              : AppTheme.primaryTeal,
+                        ),
+                      ),
               ),
             ),
           ],

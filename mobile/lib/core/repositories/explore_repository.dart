@@ -84,8 +84,9 @@ class ExploreRepositoryImpl implements ExploreRepository {
   @override
   Future<List<WaveModel>> getWavesByHashtag(String tag, {int skip = 0, int limit = 20}) async {
     try {
+      final cleanTag = tag.startsWith('#') ? tag.substring(1) : tag;
       final response = await _apiClient.dio.get(
-        '/hashtags/$tag/waves',
+        '/hashtags/$cleanTag/waves',
         queryParameters: {
           'skip': skip,
           'limit': limit,
