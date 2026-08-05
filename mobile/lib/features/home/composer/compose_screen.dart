@@ -24,6 +24,7 @@ class ComposeScreen extends ConsumerStatefulWidget {
 class _ComposeScreenState extends ConsumerState<ComposeScreen> {
   final _textController = TextEditingController();
   bool _isLoading = false;
+  bool _shouldAllowPop = false;
   
   // Poll creation fields
   bool _isCreatingPoll = false;
@@ -52,7 +53,8 @@ class _ComposeScreenState extends ConsumerState<ComposeScreen> {
   }
 
   Future<void> _handleBack() async {
-    if (_textController.text.isNotEmpty || _pollQuestionController.text.isNotEmpty) {
+    final hasDraft = _textController.text.isNotEmpty || _pollQuestionController.text.isNotEmpty;
+    if (hasDraft) {
       final confirm = await AppDialogs.showConfirmation(
         context: context,
         title: 'Discard Wave',
@@ -60,9 +62,15 @@ class _ComposeScreenState extends ConsumerState<ComposeScreen> {
         confirmText: 'Discard',
       );
       if (confirm == true && mounted) {
+        setState(() {
+          _shouldAllowPop = true;
+        });
         context.pop();
       }
     } else {
+      setState(() {
+        _shouldAllowPop = true;
+      });
       context.pop();
     }
   }
@@ -133,7 +141,13 @@ class _ComposeScreenState extends ConsumerState<ComposeScreen> {
       // Add to UI feed state
       ref.read(feedProvider.notifier).addOrUpdateWave(result);
       
+      // Refresh feed to get latest updates
+      await ref.read(feedProvider.notifier).loadFeed(refresh: true);
+      
       if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(widget.editWave != null ? 'Wave saved' : 'Wave posted')),
+        );
         context.pop();
       }
     } catch (e) {
@@ -160,7 +174,7 @@ class _ComposeScreenState extends ConsumerState<ComposeScreen> {
     final isEditing = widget.editWave != null;
 
     return PopScope(
-      canPop: false,
+      canPop: _shouldAllowPop || (_textController.text.isEmpty && _pollQuestionController.text.isEmpty),
       onPopInvokedWithResult: (didPop, _) {
         if (!didPop) {
           _handleBack();
@@ -182,8 +196,10 @@ class _ComposeScreenState extends ConsumerState<ComposeScreen> {
               padding: const EdgeInsets.only(right: 16.0),
               child: UnconstrainedBox(
                 child: PrimaryButton(
-                  text: isEditing ? 'Save' : 'Wave',
-                  onPressed: _isLoading ? null : _handlePost,
+                  text: isEditing ? 'Save' : 'Post',
+                  onPressed: (_isLoading || (_textController.text.trim().isEmpty && widget.spreadFromWave == null))
+                      ? null
+                      : _handlePost,
                   isLoading: _isLoading,
                 ),
               ),
