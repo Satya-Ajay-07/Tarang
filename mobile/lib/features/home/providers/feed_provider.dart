@@ -11,6 +11,7 @@ class FeedState {
   final bool hasMore;
   final String? errorMessage;
   final int skip;
+  final String streamType;
 
   const FeedState({
     required this.status,
@@ -18,6 +19,7 @@ class FeedState {
     required this.hasMore,
     this.errorMessage,
     required this.skip,
+    required this.streamType,
   });
 
   const FeedState.initial()
@@ -25,7 +27,8 @@ class FeedState {
         waves = const [],
         hasMore = true,
         errorMessage = null,
-        skip = 0;
+        skip = 0,
+        streamType = 'all';
 
   FeedState copyWith({
     FeedStatus? status,
@@ -33,6 +36,7 @@ class FeedState {
     bool? hasMore,
     String? errorMessage,
     int? skip,
+    String? streamType,
   }) {
     return FeedState(
       status: status ?? this.status,
@@ -40,6 +44,7 @@ class FeedState {
       hasMore: hasMore ?? this.hasMore,
       errorMessage: errorMessage ?? this.errorMessage,
       skip: skip ?? this.skip,
+      streamType: streamType ?? this.streamType,
     );
   }
 }
@@ -50,6 +55,12 @@ class FeedNotifier extends StateNotifier<FeedState> {
 
   FeedNotifier(this._waveRepository) : super(const FeedState.initial()) {
     loadFeed();
+  }
+
+  Future<void> setStreamType(String type) async {
+    if (state.streamType == type) return;
+    state = state.copyWith(streamType: type, waves: [], skip: 0, hasMore: true);
+    await loadFeed(refresh: true);
   }
 
   Future<void> loadFeed({bool refresh = false}) async {
@@ -72,7 +83,7 @@ class FeedNotifier extends StateNotifier<FeedState> {
       final fetchedWaves = await _waveRepository.getWaves(
         skip: state.skip,
         limit: _limit,
-        streamType: 'all',
+        streamType: state.streamType,
       );
 
       final newWaves =

@@ -225,6 +225,21 @@ def create_wave(
                 db.flush()
             new_wave.hashtags.append(hashtag)
 
+        # Handle automatic mention extraction and notification alert
+        mentioned_usernames = re.findall(r"@(\w+)", new_wave.content)
+        unique_mentions = list(set(u.lower() for u in mentioned_usernames))
+        for username_lower in unique_mentions:
+            mentioned_user = db.query(User).filter(func.lower(User.username) == username_lower).first()
+            if mentioned_user and mentioned_user.id != current_user.id:
+                alert = WaveAlert(
+                    recipient_id=mentioned_user.id,
+                    sender_id=current_user.id,
+                    wave_id=new_wave.id,
+                    type="mention",
+                    content=f"{current_user.username} mentioned you in a Wave"
+                )
+                db.add(alert)
+
     # Handle Poll attachment
     if wave_in.poll:
         expires_at = datetime.utcnow() + timedelta(hours=wave_in.poll.expires_in_hours)
@@ -300,29 +315,57 @@ def get_wave_stream(
         selectinload(Wave.hashtags)
     ).filter(Wave.parent_wave_id == None)
 
+    # Load followings/riding IDs for scoring boost
+    riding_ids = [r[0] for r in db.query(WaveRider.rider_of_id).filter(WaveRider.rider_id == current_user.id).all()]
+    riding_ids.append(current_user.id) # Include own
+
     if stream_type == "riding":
-        # Filter by people user rides with (follows)
-        riding_ids = db.query(WaveRider.rider_of_id).filter(WaveRider.rider_id == current_user.id).all()
-        riding_ids = [r[0] for r in riding_ids]
-        riding_ids.append(current_user.id) # Include own waves
         query = query.filter(Wave.creator_id.in_(riding_ids))
 
     start_db = time.perf_counter()
-    waves = query.order_by(Wave.created_at.desc()).offset(skip).limit(limit).all()
+    # Fetch larger candidate pool of waves to rank
+    waves = query.order_by(Wave.created_at.desc()).limit(150).all()
     db_time = (time.perf_counter() - start_db) * 1000
 
     start_enrich = time.perf_counter()
     enriched = enrich_waves_bulk(waves, db, current_user)
+    
+    # Calculate scores for each enriched wave response
+    scored_waves = []
+    for w in enriched:
+        # Time age in hours
+        age_in_hours = (datetime.utcnow() - w.created_at.replace(tzinfo=None)).total_seconds() / 3600.0
+        
+        # Interactions sum (signals: ripples, joins, spreads, bookmarks)
+        interaction_score = (w.ripples_count * 1.5) + (w.joins_count * 2.0) + (w.spreads_count * 2.5)
+        if w.bookmarked_by_me:
+            interaction_score += 3.0
+            
+        # Following relationship boost
+        following_boost = 3.0 if w.creator_id in riding_ids else 0.0
+        
+        # Time decay denominator formula
+        time_decay = 1.0 / ((age_in_hours + 2.0) ** 1.8)
+        
+        # Compute final trending score
+        score = (1.0 + interaction_score + following_boost) * time_decay
+        scored_waves.append((w, score))
+        
+    # Sort waves list by score descending
+    scored_waves.sort(key=lambda x: x[1], reverse=True)
+    
+    # Apply pagination offset slices
+    paged_waves = [sw[0] for sw in scored_waves[skip:skip+limit]]
     enrich_time = (time.perf_counter() - start_enrich) * 1000
 
     total_time = (time.perf_counter() - start_total) * 1000
     logger.info(
-        "get_wave_stream performance: db_time=%.2fms, enrichment_time=%.2fms, total_time=%.2fms",
+        "get_wave_stream scored performance: db_time=%.2fms, enrichment_time=%.2fms, total_time=%.2fms",
         db_time,
         enrich_time,
         total_time
     )
-    return enriched
+    return paged_waves
 
 # Rising Waves (Trending)
 @router.get("/rising", response_model=List[WaveResponse])

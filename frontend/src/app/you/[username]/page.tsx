@@ -7,6 +7,7 @@ import { WaveCard } from '@/features/waves/components/WaveCard';
 import { apiRequest } from '@/services/api';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { Button, Modal } from '@/components/ui';
 
 export default function UserProfilePage() {
   const { user: currentUser } = useAuth();
@@ -21,6 +22,7 @@ export default function UserProfilePage() {
   const [ridingCount, setRidingCount] = useState(0);
   const [ridersCount, setRidersCount] = useState(0);
   const [ridingLoading, setRidingLoading] = useState(false);
+  const [activeTab, setActiveTab] = useState<'Waves' | 'Replies' | 'Media' | 'Activity'>('Waves');
 
   // Follow Dialog states
   const [showFollowModal, setShowFollowModal] = useState(false);
@@ -103,7 +105,7 @@ export default function UserProfilePage() {
     return (
       <MainAppLayout>
         <div className="flex h-screen items-center justify-center">
-          <svg className="animate-spin h-8 w-8 text-aqua" fill="none" viewBox="0 0 24 24">
+          <svg className="animate-spin h-8 w-8 text-primary" fill="none" viewBox="0 0 24 24">
             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
             <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
           </svg>
@@ -112,26 +114,41 @@ export default function UserProfilePage() {
     );
   }
 
+  // Filter list based on selected tab
+  const getTabWaves = () => {
+    switch (activeTab) {
+      case 'Waves':
+        return userWaves.filter(w => !w.parent_wave_id && w.spread_from_id === null);
+      case 'Replies':
+        return userWaves.filter(w => w.parent_wave_id !== null);
+      case 'Media':
+        return userWaves.filter(w => w.media_url !== null);
+      case 'Activity':
+      default:
+        return userWaves;
+    }
+  };
+
+  const activeList = getTabWaves();
+
   return (
     <MainAppLayout>
-      <div className="flex flex-col min-h-screen bg-transparent pb-20 md:pb-6">
+      <div className="flex flex-col min-h-screen bg-transparent pb-20 md:pb-6 font-body">
         {/* Cover Photo */}
-        <div className="h-44 bg-gradient-to-r from-ocean to-aqua relative">
-          {profileData.cover_url ? (
+        <div className="h-44 w-full relative overflow-hidden rounded-b-card shadow-sm border border-card-border bg-gradient-to-r from-secondary to-primary">
+          {profileData.cover_url && (
             <img src={profileData.cover_url} alt="Cover" className="w-full h-full object-cover" />
-          ) : (
-            <div className="w-full h-full bg-gradient-to-r from-slate-200 to-slate-300 dark:from-slate-800 dark:to-slate-900" />
           )}
         </div>
 
         {/* Profile Details */}
         <div className="px-6 relative -mt-16 space-y-4">
           <div className="flex justify-between items-end">
-            <div className="h-28 w-28 rounded-full border-4 border-white dark:border-tarang-bg-dark bg-slate-200 dark:bg-slate-800 flex items-center justify-center text-4xl font-bold overflow-hidden select-none">
+            <div className="h-28 w-28 rounded-full border-4 border-background bg-surface flex items-center justify-center text-4xl font-bold overflow-hidden select-none shadow-md shrink-0">
               {profileData.avatar_url ? (
                 <img src={profileData.avatar_url} alt="Avatar" className="w-full h-full object-cover" />
               ) : (
-                <div className="w-full h-full bg-gradient-to-tr from-ocean to-aqua text-white flex items-center justify-center font-extrabold text-3xl">
+                <div className="w-full h-full bg-gradient-to-tr from-secondary to-primary text-white flex items-center justify-center font-black text-3xl font-display">
                   {profileData.username[0].toUpperCase()}
                 </div>
               )}
@@ -140,10 +157,10 @@ export default function UserProfilePage() {
             <button
               onClick={handleToggleRide}
               disabled={ridingLoading}
-              className={`rounded-full px-5 py-2 text-xs font-bold transition-all border ${
+              className={`rounded-full px-5 py-2 text-xs font-bold transition-all border shadow-sm ${
                 isRiding 
-                  ? 'bg-transparent text-slate-500 border-slate-200 dark:border-slate-800 hover:bg-red-50 hover:text-red-500 hover:border-red-100 dark:hover:bg-red-950/20' 
-                  : 'bg-aqua text-white border-transparent hover:bg-ocean'
+                  ? 'bg-transparent text-text-secondary border-card-border hover:bg-danger/10 hover:text-danger hover:border-danger/35' 
+                  : 'bg-primary text-white border-transparent hover:opacity-95'
               }`}
             >
               {isRiding ? 'Riding' : 'Ride'}
@@ -151,17 +168,17 @@ export default function UserProfilePage() {
           </div>
 
           <div>
-            <h2 className="text-xl font-bold">{profileData.full_name || profileData.username}</h2>
-            <p className="text-xs text-slate-400">@{profileData.username}</p>
+            <h2 className="text-xl font-black text-text-primary font-display">{profileData.full_name || profileData.username}</h2>
+            <p className="text-xs text-text-muted font-bold">@{profileData.username}</p>
           </div>
 
           {profileData.bio && (
-            <p className="text-sm text-slate-600 dark:text-slate-300 whitespace-pre-line">
+            <p className="text-sm text-text-secondary whitespace-pre-line leading-relaxed">
               {profileData.bio}
             </p>
           )}
 
-          <div className="flex flex-wrap gap-4 text-xs font-semibold text-slate-400">
+          <div className="flex flex-wrap gap-4 text-xs font-bold text-text-muted">
             {profileData.location && (
               <span className="flex items-center gap-1">📍 {profileData.location}</span>
             )}
@@ -169,95 +186,90 @@ export default function UserProfilePage() {
               <span className="flex items-center gap-1">🌍 {profileData.country}</span>
             )}
             {profileData.website && (
-              <a href={profileData.website} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-aqua hover:underline">
+              <a href={profileData.website} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-primary hover:underline">
                 🔗 Website
-              </a>
-            )}
-            {profileData.twitter_url && (
-              <a href={profileData.twitter_url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-aqua hover:underline">
-                🐦 Twitter
-              </a>
-            )}
-            {profileData.github_url && (
-              <a href={profileData.github_url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-aqua hover:underline">
-                💻 GitHub
               </a>
             )}
             <span>📅 Joined {new Date(profileData.created_at).toLocaleDateString()}</span>
           </div>
 
-          {/* Mutual Followers UI banner */}
-          {profileData.mutual_count > 0 && (
-            <div className="flex items-center gap-2 p-2 bg-slate-50 dark:bg-slate-900/50 rounded-2xl border border-card-border">
-              <div className="flex -space-x-2 overflow-hidden">
-                {profileData.mutual_riders.slice(0, 3).map((m: any) => (
-                  <div key={m.id} className="inline-block h-6 w-6 rounded-full ring-2 ring-white dark:ring-tarang-bg-dark overflow-hidden">
-                    {m.avatar_url ? (
-                      <img src={m.avatar_url} alt={m.username} className="h-full w-full object-cover" />
-                    ) : (
-                      <div className="h-full w-full bg-slate-300 flex items-center justify-center text-[10px] font-bold">
-                        {m.username[0].toUpperCase()}
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-              <span className="text-[10px] font-bold text-text-secondary">
-                Ridden with by {profileData.mutual_riders[0].full_name || profileData.mutual_riders[0].username}
-                {profileData.mutual_count > 1 ? ` and ${profileData.mutual_count - 1} other mutuals` : ''}
-              </span>
-            </div>
-          )}
-
           {/* Stats counts riders / riding */}
-          <div className="flex gap-6 text-sm font-semibold pt-2 border-t border-slate-100 dark:border-slate-800/40 select-none">
+          <div className="flex gap-6 text-sm font-bold pt-3 border-t border-card-border select-none">
             <button 
               onClick={() => handleShowFollowModal('riding')}
               className="hover:underline cursor-pointer text-left text-text-primary"
             >
-              <span className="font-bold">{ridingCount}</span>
-              <span className="text-text-secondary ml-1">Riding</span>
+              <span className="font-extrabold">{ridingCount}</span>
+              <span className="text-text-muted ml-1 font-semibold">Riding</span>
             </button>
             <button 
               onClick={() => handleShowFollowModal('riders')}
               className="hover:underline cursor-pointer text-left text-text-primary"
             >
-              <span className="font-bold">{ridersCount}</span>
-              <span className="text-text-secondary ml-1">Wave Riders</span>
+              <span className="font-extrabold">{ridersCount}</span>
+              <span className="text-text-muted ml-1 font-semibold">Wave Riders</span>
             </button>
             <div className="text-text-primary">
-              <span className="font-bold">{profileData.wave_count || 0}</span>
-              <span className="text-text-secondary ml-1">Waves</span>
+              <span className="font-extrabold">{profileData.wave_count}</span>
+              <span className="text-text-muted ml-1 font-semibold">Waves</span>
             </div>
           </div>
         </div>
 
-        {/* User waves stream listing with Pinned waves support */}
+        {/* Profile Tabs Navigation bar */}
+        <div className="mt-6 border-b border-card-border px-6 flex gap-4 text-xs font-black uppercase tracking-wider text-text-secondary select-none">
+          {(['Waves', 'Replies', 'Media', 'Activity'] as const).map((tab) => (
+            <button
+              key={tab}
+              onClick={() => setActiveTab(tab)}
+              className={`pb-2.5 border-b-2 transition-all duration-200 ${
+                activeTab === tab
+                  ? 'border-primary text-primary'
+                  : 'border-transparent hover:text-text-primary'
+              }`}
+            >
+              {tab}
+            </button>
+          ))}
+        </div>
+
+        {/* User waves stream listing */}
         <div className="p-6 space-y-4">
-          <h3 className="text-sm font-bold uppercase tracking-wider text-slate-500 pb-2 border-b border-slate-100 dark:border-slate-800/40">
-            Waves
-          </h3>
-          {userWaves.length === 0 ? (
-            <p className="text-center text-xs text-slate-400 py-10">This rider hasn't created any waves yet.</p>
+          {activeList.length === 0 ? (
+            <div className="text-center py-16 space-y-3.5 border border-dashed border-card-border rounded-card bg-card-bg/10 select-none">
+              <div className="text-4xl animate-bounce">
+                {activeTab === 'Waves' ? '🌊' : activeTab === 'Replies' ? '💬' : activeTab === 'Media' ? '📸' : '🪶'}
+              </div>
+              <h3 className="text-sm font-bold text-text-secondary font-display">No content found</h3>
+              <p className="text-xs text-text-muted max-w-xs mx-auto">
+                {activeTab === 'Waves'
+                  ? `@${profileData.username} hasn't released any original waves yet.`
+                  : activeTab === 'Replies'
+                  ? `@${profileData.username} hasn't replied to any waves.`
+                  : activeTab === 'Media'
+                  ? `@${profileData.username} hasn't uploaded any media attachments.`
+                  : `@${profileData.username} has no timeline activities logged.`}
+              </p>
+            </div>
           ) : (
             <div className="space-y-4">
-              {/* Pinned Wave */}
-              {profileData.pinned_wave_id && userWaves.find(w => w.id === profileData.pinned_wave_id) && (
+              {/* Pinned Wave (rendered only on original Waves tab) */}
+              {activeTab === 'Waves' && profileData.pinned_wave_id && activeList.find(w => w.id === profileData.pinned_wave_id) && (
                 <div className="space-y-2">
-                  <div className="flex items-center gap-1.5 text-xs font-bold text-yellow-600 dark:text-yellow-400 pl-4">
+                  <div className="flex items-center gap-1.5 text-xs font-bold text-primary pl-4">
                     <span>📌</span>
                     <span>Pinned Wave</span>
                   </div>
                   <WaveCard 
-                    wave={userWaves.find(w => w.id === profileData.pinned_wave_id)} 
+                    wave={activeList.find(w => w.id === profileData.pinned_wave_id)} 
                     onRefresh={fetchProfile} 
                   />
                 </div>
               )}
 
               {/* Remaining Waves */}
-              {userWaves
-                .filter(w => w.id !== profileData.pinned_wave_id)
+              {activeList
+                .filter(w => activeTab !== 'Waves' || w.id !== profileData.pinned_wave_id)
                 .map((wave) => (
                   <WaveCard key={wave.id} wave={wave} onRefresh={fetchProfile} />
                 ))}
@@ -267,10 +279,10 @@ export default function UserProfilePage() {
 
         {/* Follow modal lists */}
         {showFollowModal && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 backdrop-blur-sm p-4">
-            <div className="w-full max-w-md rounded-3xl border border-slate-200/60 bg-white p-6 shadow-xl dark:border-slate-850 dark:bg-slate-900/90 animate-fadeIn flex flex-col max-h-[80vh]">
-              <div className="flex justify-between items-center mb-4 border-b border-slate-100 dark:border-slate-800/40 pb-3">
-                <h3 className="text-lg font-bold capitalize">
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/60 backdrop-blur-md p-4">
+            <div className="w-full max-w-md rounded-dialog border border-card-border bg-card-bg p-6 shadow-lg animate-in fade-in-0 zoom-in-95 duration-200 flex flex-col max-h-[85vh] font-body">
+              <div className="flex justify-between items-center mb-4 border-b border-card-border pb-3">
+                <h3 className="text-base font-black text-text-primary font-display capitalize">
                   {followModalType === 'riding' ? 'Riding' : 'Wave Riders'}
                 </h3>
                 <button 
@@ -278,7 +290,7 @@ export default function UserProfilePage() {
                     setShowFollowModal(false);
                     setFollowList([]);
                   }}
-                  className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-sm font-bold"
+                  className="p-1.5 rounded-full hover:bg-card-border/30 text-text-secondary hover:text-text-primary text-xs font-bold transition-all"
                 >
                   ✕
                 </button>
@@ -287,33 +299,33 @@ export default function UserProfilePage() {
               <div className="flex-1 overflow-y-auto space-y-4 pr-1">
                 {followLoading ? (
                   <div className="text-center py-8">
-                    <svg className="animate-spin h-6 w-6 text-aqua mx-auto" fill="none" viewBox="0 0 24 24">
+                    <svg className="animate-spin h-6 w-6 text-primary mx-auto" fill="none" viewBox="0 0 24 24">
                       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                     </svg>
                   </div>
                 ) : followList.length === 0 ? (
-                  <p className="text-center text-xs text-slate-400 py-8">No riders here yet.</p>
+                  <p className="text-center text-xs text-text-muted py-8 font-bold select-none">No riders here yet.</p>
                 ) : (
                   followList.map((member) => (
-                    <div key={member.id} className="flex items-center justify-between">
+                    <div key={member.id} className="flex items-center justify-between gap-3">
                       <Link 
                         href={`/you/${member.username}`} 
                         onClick={() => setShowFollowModal(false)}
-                        className="flex items-center gap-3 group cursor-pointer"
+                        className="flex items-center gap-3 group cursor-pointer truncate"
                       >
-                        <div className="h-10 w-10 rounded-full bg-gradient-to-tr from-ocean to-aqua flex items-center justify-center text-white text-xs font-bold overflow-hidden">
+                        <div className="h-9 w-9 rounded-full bg-gradient-to-tr from-secondary to-primary flex items-center justify-center text-white text-xs font-bold overflow-hidden shrink-0 shadow-sm">
                           {member.avatar_url ? (
                             <img src={member.avatar_url} alt="Avatar" className="h-full w-full object-cover" />
                           ) : (
                             member.username[0].toUpperCase()
                           )}
                         </div>
-                        <div>
-                          <p className="text-sm font-bold leading-none group-hover:underline">
+                        <div className="truncate">
+                          <p className="text-xs font-bold leading-none group-hover:underline text-text-primary truncate">
                             {member.full_name || member.username}
                           </p>
-                          <p className="text-xs text-slate-400">@{member.username}</p>
+                          <p className="text-[10px] text-text-muted mt-0.5">@{member.username}</p>
                         </div>
                       </Link>
                     </div>

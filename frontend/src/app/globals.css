@@ -7,57 +7,108 @@
   --color-tarang-bg-light: #F8FAFC;
   --color-tarang-bg-dark: #08131E;
   
+  /* Core Design Tokens */
+  --color-primary: var(--primary);
+  --color-secondary: var(--secondary);
+  --color-accent: var(--accent);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-danger: var(--danger);
+  
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-surface: var(--surface);
   --color-card-bg: var(--card-bg);
   --color-card-border: var(--card-border);
+  
   --color-text-primary: var(--text-primary);
   --color-text-secondary: var(--text-secondary);
   --color-text-muted: var(--text-muted);
+
+  /* Radius Tokens */
+  --radius-btn: var(--radius-btn-val);
+  --radius-card: var(--radius-card-val);
+  --radius-input: var(--radius-input-val);
+  --radius-dialog: var(--radius-dialog-val);
+  --radius-dropdown: var(--radius-dropdown-val);
+
+  /* Shadow Elevaton System */
+  --shadow-sm: var(--shadow-sm-val);
+  --shadow-md: var(--shadow-md-val);
+  --shadow-lg: var(--shadow-lg-val);
+
+  /* Typography scale */
+  --font-display: 'Outfit', 'Inter', system-ui, -apple-system, sans-serif;
+  --font-body: 'Inter', system-ui, -apple-system, sans-serif;
 }
 
 :root {
   --background: #F8FAFC;
   --foreground: #0F172A;
+  --surface: #FFFFFF;
+  --card-bg: #FFFFFF;
+  --card-border: #E2E8F0;
+  
+  --primary: #0D9488;    /* Signature Teal */
+  --secondary: #0B4F8C;  /* Ocean Blue */
+  --accent: #2DD4BF;     /* Bright Foam */
+  --success: #10B981;    /* Emerald Green */
+  --warning: #F59E0B;    /* Amber Warning */
+  --danger: #EF4444;     /* Red Danger */
+
+  --text-primary: #0F172A;
+  --text-secondary: #475569;
+  --text-muted: #64748B;
+  
   --ocean: #0B4F8C;
   --aqua: #0D9488;
   --foam: #2DD4BF;
-  --card-bg: #FFFFFF;
-  --card-border: #E2E8F0;
-  --text-primary: #0F172A;
-  --text-secondary: #475569;
-  --text-muted: #64748B;
-}
 
-html:not(.dark) {
-  --background: #F8FAFC;
-  --foreground: #0F172A;
-  --card-bg: #FFFFFF;
-  --card-border: #E2E8F0;
-  --text-primary: #0F172A;
-  --text-secondary: #475569;
-  --text-muted: #64748B;
-  --ocean: #0B4F8C;
-  --aqua: #0D9488;
+  /* Radius mapping values */
+  --radius-btn-val: 12px;
+  --radius-card-val: 24px;
+  --radius-input-val: 12px;
+  --radius-dialog-val: 32px;
+  --radius-dropdown-val: 16px;
+
+  /* Shadow elevations values */
+  --shadow-sm-val: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --shadow-md-val: 0 4px 6px -1px rgba(0, 0, 0, 0.08), 0 2px 4px -1px rgba(0, 0, 0, 0.04);
+  --shadow-lg-val: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
 }
 
 .dark {
   --background: #08131E;
   --foreground: #F8FBFD;
-  --ocean: #0F4C81;
-  --aqua: #14B8A6;
-  --foam: #6EE7E7;
+  --surface: #0B1824;
   --card-bg: #0F1E2E;
   --card-border: #1E2E3F;
+  
+  --primary: #14B8A6;    /* Glowing Teal */
+  --secondary: #0F4C81;  /* Ocean Navy */
+  --accent: #6EE7E7;     /* Bright Cyan Foam */
+  --success: #34D399;
+  --warning: #FBBF24;
+  --danger: #F87171;
+
   --text-primary: #F8FBFD;
   --text-secondary: #A0AEC0;
   --text-muted: #64748B;
+
+  --ocean: #0F4C81;
+  --aqua: #14B8A6;
+  --foam: #6EE7E7;
+
+  /* Shadow elevations values for dark mode */
+  --shadow-sm-val: 0 1px 2px 0 rgba(0, 0, 0, 0.2);
+  --shadow-md-val: 0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -1px rgba(0, 0, 0, 0.15);
+  --shadow-lg-val: 0 10px 15px -3px rgba(0, 0, 0, 0.4), 0 4px 6px -2px rgba(0, 0, 0, 0.2);
 }
 
 body {
   background-color: var(--background);
   color: var(--text-primary);
-  font-family: 'Outfit', 'Inter', system-ui, -apple-system, sans-serif;
+  font-family: var(--font-body);
   transition: background-color 0.2s ease, color 0.2s ease;
   min-height: 100vh;
 }
@@ -71,9 +122,62 @@ body {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: var(--aqua);
+  background: var(--primary);
   border-radius: 999px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--ocean);
+  background: var(--secondary);
+}
+
+/* Typography Scales & Global Utility overrides */
+h1, .text-h1 {
+  font-family: var(--font-display);
+  font-size: 2.25rem; /* 36px */
+  line-height: 1.25;
+  font-weight: 800;
+}
+
+h2, .text-h2 {
+  font-family: var(--font-display);
+  font-size: 1.875rem; /* 30px */
+  line-height: 1.3;
+  font-weight: 800;
+}
+
+h3, .text-h3 {
+  font-family: var(--font-display);
+  font-size: 1.5rem; /* 24px */
+  line-height: 1.35;
+  font-weight: 700;
+}
+
+.text-display {
+  font-family: var(--font-display);
+  font-size: 3rem; /* 48px */
+  line-height: 1.15;
+  font-weight: 900;
+  letter-spacing: -0.03em;
+}
+
+.text-body {
+  font-family: var(--font-body);
+  font-size: 1rem; /* 16px */
+  line-height: 1.5;
+}
+
+.text-caption {
+  font-family: var(--font-body);
+  font-size: 0.875rem; /* 14px */
+  line-height: 1.4;
+}
+
+.text-metadata {
+  font-family: var(--font-body);
+  font-size: 0.75rem; /* 12px */
+  line-height: 1.3;
+}
+
+/* Accent gradient background utility */
+.bg-wave-gradient {
+  background: linear-gradient(135deg, var(--secondary) 0%, var(--primary) 100%);
 }

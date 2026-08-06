@@ -18,23 +18,30 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: 'primary' | 'secondary' | 'ghost' | 'danger';
   size?: 'sm' | 'md' | 'lg';
   loading?: boolean;
+  isIcon?: boolean;
 }
 
 const variantStyles: Record<NonNullable<ButtonProps['variant']>, string> = {
   primary:
-    'bg-gradient-to-r from-ocean to-aqua text-white hover:opacity-90 focus-visible:ring-aqua',
+    'bg-gradient-to-r from-secondary to-primary text-white hover:opacity-90 shadow-md focus-visible:ring-primary',
   secondary:
-    'bg-white/10 text-slate-200 border border-white/15 hover:bg-white/20 focus-visible:ring-white/30',
+    'bg-surface/40 text-text-primary border border-card-border hover:bg-surface/80 hover:border-text-secondary/30 focus-visible:ring-primary/40',
   ghost:
-    'bg-transparent text-slate-300 hover:bg-white/10 focus-visible:ring-white/20',
+    'bg-transparent text-text-secondary hover:bg-card-border/20 hover:text-text-primary focus-visible:ring-primary/20',
   danger:
-    'bg-red-500/20 text-red-400 border border-red-500/30 hover:bg-red-500/30 focus-visible:ring-red-400',
+    'bg-danger/10 text-danger border border-danger/30 hover:bg-danger/20 focus-visible:ring-danger/50',
 };
 
 const sizeStyles: Record<NonNullable<ButtonProps['size']>, string> = {
-  sm: 'px-3 py-1.5 text-xs rounded-lg',
-  md: 'px-4 py-2 text-sm rounded-xl',
-  lg: 'px-6 py-3 text-base rounded-xl',
+  sm: 'px-3 py-1.5 text-xs font-semibold',
+  md: 'px-4 py-2 text-sm font-semibold',
+  lg: 'px-6 py-3 text-base font-bold',
+};
+
+const iconSizeStyles: Record<NonNullable<ButtonProps['size']>, string> = {
+  sm: 'p-1.5 text-xs',
+  md: 'p-2.5 text-sm',
+  lg: 'p-4 text-base',
 };
 
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
@@ -43,6 +50,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
       variant = 'primary',
       size = 'md',
       loading = false,
+      isIcon = false,
       disabled,
       className = '',
       children,
@@ -58,12 +66,13 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
         disabled={isDisabled}
         className={[
           'inline-flex items-center justify-center gap-2',
-          'font-semibold tracking-tight',
-          'transition-all duration-200',
-          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900',
-          'disabled:opacity-50 disabled:cursor-not-allowed',
+          'tracking-tight select-none',
+          'transition-all duration-200 active:scale-[0.98]',
+          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background',
+          'disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100',
+          isIcon ? 'rounded-full' : 'rounded-btn',
+          isIcon ? iconSizeStyles[size] : sizeStyles[size],
           variantStyles[variant],
-          sizeStyles[size],
           className,
         ].join(' ')}
         {...rest}

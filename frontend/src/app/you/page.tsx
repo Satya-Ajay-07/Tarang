@@ -6,12 +6,15 @@ import { useAuth } from '@/context/AuthContext';
 import { WaveCard } from '@/features/waves/components/WaveCard';
 import { apiRequest } from '@/services/api';
 import Link from 'next/link';
+import { Button, Modal, Card } from '@/components/ui';
 
 export default function ProfilePage() {
   const { user } = useAuth();
   const [profileData, setProfileData] = useState<any>(null);
   const [myWaves, setMyWaves] = useState<any[]>([]);
+  const [bookmarkedWaves, setBookmarkedWaves] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState<'Waves' | 'Replies' | 'Media' | 'Bookmarks' | 'Activity'>('Waves');
   const [showEditModal, setShowEditModal] = useState(false);
   const [fullName, setFullName] = useState('');
   const [bio, setBio] = useState('');
@@ -79,6 +82,13 @@ export default function ProfilePage() {
       if (wavesRes.ok) {
         const wavesData = await wavesRes.json();
         setMyWaves(wavesData.filter((w: any) => w.creator_id === user.id));
+      }
+
+      // Fetch bookmarks
+      const bookmarksRes = await apiRequest('/waves/bookmarks');
+      if (bookmarksRes.ok) {
+        const bookmarksData = await bookmarksRes.json();
+        setBookmarkedWaves(bookmarksData);
       }
     } catch (err) {
       console.error(err);
@@ -263,7 +273,7 @@ export default function ProfilePage() {
     return (
       <MainAppLayout>
         <div className="flex h-screen items-center justify-center">
-          <svg className="animate-spin h-8 w-8 text-aqua" fill="none" viewBox="0 0 24 24">
+          <svg className="animate-spin h-8 w-8 text-primary" fill="none" viewBox="0 0 24 24">
             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
             <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
           </svg>
@@ -272,51 +282,69 @@ export default function ProfilePage() {
     );
   }
 
+  // Filter lists based on selected tabs
+  const getTabWaves = () => {
+    switch (activeTab) {
+      case 'Waves':
+        return myWaves.filter(w => !w.parent_wave_id && w.spread_from_id === null);
+      case 'Replies':
+        return myWaves.filter(w => w.parent_wave_id !== null);
+      case 'Media':
+        return myWaves.filter(w => w.media_url !== null);
+      case 'Bookmarks':
+        return bookmarkedWaves;
+      case 'Activity':
+      default:
+        return myWaves;
+    }
+  };
+
+  const activeList = getTabWaves();
+
   return (
     <MainAppLayout>
-      <div className="flex flex-col min-h-screen bg-transparent pb-20 md:pb-6">
+      <div className="flex flex-col min-h-screen bg-transparent pb-20 md:pb-6 font-body">
         {/* Cover Photo */}
-        <div className="h-44 bg-gradient-to-r from-ocean to-aqua relative">
-          {coverPreview ? (
+        <div className="h-44 w-full relative overflow-hidden rounded-b-card shadow-sm border border-card-border bg-gradient-to-r from-secondary to-primary">
+          {coverPreview && (
             <img src={coverPreview} alt="Cover" className="w-full h-full object-cover" />
-          ) : (
-            <div className="w-full h-full bg-gradient-to-r from-slate-200 to-slate-300 dark:from-slate-800 dark:to-slate-900" />
           )}
         </div>
 
         {/* Profile Card details wrapper */}
         <div className="px-6 relative -mt-16 space-y-4">
           <div className="flex justify-between items-end">
-            <div className="h-28 w-28 rounded-full border-4 border-white dark:border-tarang-bg-dark bg-slate-200 dark:bg-slate-800 flex items-center justify-center text-4xl font-bold overflow-hidden select-none">
+            <div className="h-28 w-28 rounded-full border-4 border-background bg-surface flex items-center justify-center text-4xl font-bold overflow-hidden select-none shadow-md shrink-0">
               {avatarPreview ? (
                 <img src={avatarPreview} alt="Avatar" className="w-full h-full object-cover" />
               ) : (
-                <div className="w-full h-full bg-gradient-to-tr from-ocean to-aqua text-white flex items-center justify-center font-extrabold text-3xl">
+                <div className="w-full h-full bg-gradient-to-tr from-secondary to-primary text-white flex items-center justify-center font-black text-3xl font-display">
                   {profileData.username[0].toUpperCase()}
                 </div>
               )}
             </div>
 
-            <button
+            <Button
+              variant="secondary"
               onClick={() => setShowEditModal(true)}
-              className="rounded-full border border-slate-200 bg-white/70 px-4 py-2 text-xs font-bold hover:bg-slate-50 transition-colors dark:border-slate-850 dark:bg-slate-900/50"
+              className="rounded-full px-5 py-2 text-xs font-bold shadow-sm"
             >
               Edit Profile
-            </button>
+            </Button>
           </div>
 
           <div>
-            <h2 className="text-xl font-bold">{profileData.full_name || profileData.username}</h2>
-            <p className="text-xs text-slate-400">@{profileData.username}</p>
+            <h2 className="text-xl font-black text-text-primary font-display">{profileData.full_name || profileData.username}</h2>
+            <p className="text-xs text-text-muted font-bold">@{profileData.username}</p>
           </div>
 
           {profileData.bio && (
-            <p className="text-sm text-slate-600 dark:text-slate-300 whitespace-pre-line">
+            <p className="text-sm text-text-secondary whitespace-pre-line leading-relaxed">
               {profileData.bio}
             </p>
           )}
 
-          <div className="flex flex-wrap gap-4 text-xs font-semibold text-slate-400">
+          <div className="flex flex-wrap gap-4 text-xs font-bold text-text-muted">
             {profileData.location && (
               <span className="flex items-center gap-1">📍 {profileData.location}</span>
             )}
@@ -327,17 +355,17 @@ export default function ProfilePage() {
               <span className="flex items-center gap-1">📞 {profileData.phone_number}</span>
             )}
             {profileData.website && (
-              <a href={profileData.website} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-aqua hover:underline">
+              <a href={profileData.website} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-primary hover:underline">
                 🔗 Website
               </a>
             )}
             {profileData.twitter_url && (
-              <a href={profileData.twitter_url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-aqua hover:underline">
+              <a href={profileData.twitter_url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-primary hover:underline">
                 🐦 Twitter
               </a>
             )}
             {profileData.github_url && (
-              <a href={profileData.github_url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-aqua hover:underline">
+              <a href={profileData.github_url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-primary hover:underline">
                 💻 GitHub
               </a>
             )}
@@ -345,54 +373,84 @@ export default function ProfilePage() {
           </div>
 
           {/* Stats counts riders / riding */}
-          <div className="flex gap-6 text-sm font-semibold pt-2 border-t border-slate-100 dark:border-slate-800/40 select-none">
+          <div className="flex gap-6 text-sm font-bold pt-3 border-t border-card-border select-none">
             <button 
               onClick={() => handleShowFollowModal('riding')}
               className="hover:underline cursor-pointer text-left text-text-primary"
             >
-              <span className="font-bold">{profileData.riding_count}</span>
-              <span className="text-text-secondary ml-1">Riding</span>
+              <span className="font-extrabold">{profileData.riding_count}</span>
+              <span className="text-text-muted ml-1 font-semibold">Riding</span>
             </button>
             <button 
               onClick={() => handleShowFollowModal('riders')}
               className="hover:underline cursor-pointer text-left text-text-primary"
             >
-              <span className="font-bold">{profileData.riders_count}</span>
-              <span className="text-text-secondary ml-1">Wave Riders</span>
+              <span className="font-extrabold">{profileData.riders_count}</span>
+              <span className="text-text-muted ml-1 font-semibold">Wave Riders</span>
             </button>
             <div className="text-text-primary">
-              <span className="font-bold">{profileData.wave_count}</span>
-              <span className="text-text-secondary ml-1">Waves</span>
+              <span className="font-extrabold">{profileData.wave_count}</span>
+              <span className="text-text-muted ml-1 font-semibold">Waves</span>
             </div>
           </div>
         </div>
 
-        {/* User waves stream listing with Pinned waves support */}
+        {/* Profile Tabs Navigation bar */}
+        <div className="mt-6 border-b border-card-border px-6 flex gap-4 text-xs font-black uppercase tracking-wider text-text-secondary select-none">
+          {(['Waves', 'Replies', 'Media', 'Bookmarks', 'Activity'] as const).map((tab) => (
+            <button
+              key={tab}
+              onClick={() => setActiveTab(tab)}
+              className={`pb-2.5 border-b-2 transition-all duration-200 ${
+                activeTab === tab
+                  ? 'border-primary text-primary'
+                  : 'border-transparent hover:text-text-primary'
+              }`}
+            >
+              {tab}
+            </button>
+          ))}
+        </div>
+
+        {/* Stream lists with better Empty States */}
         <div className="p-6 space-y-4">
-          <h3 className="text-sm font-bold uppercase tracking-wider text-slate-500 pb-2 border-b border-slate-100 dark:border-slate-800/40">
-            Waves
-          </h3>
-          {myWaves.length === 0 ? (
-            <p className="text-center text-xs text-slate-400 py-10">You haven't created any waves yet.</p>
+          {activeList.length === 0 ? (
+            <div className="text-center py-16 space-y-3.5 border border-dashed border-card-border rounded-card bg-card-bg/10 select-none">
+              <div className="text-4xl animate-bounce">
+                {activeTab === 'Waves' ? '🌊' : activeTab === 'Replies' ? '💬' : activeTab === 'Media' ? '📸' : activeTab === 'Bookmarks' ? '🔖' : '🪶'}
+              </div>
+              <h3 className="text-sm font-bold text-text-secondary font-display">No content found</h3>
+              <p className="text-xs text-text-muted max-w-xs mx-auto">
+                {activeTab === 'Waves'
+                  ? "You haven't released any original waves yet."
+                  : activeTab === 'Replies'
+                  ? "You haven't participated in any ripples or discussions."
+                  : activeTab === 'Media'
+                  ? "There are no images or video attachments on your timeline."
+                  : activeTab === 'Bookmarks'
+                  ? "Your saved bookmarks list is currently empty."
+                  : "No timeline activities logged."}
+              </p>
+            </div>
           ) : (
             <div className="space-y-4">
-              {/* Pinned Wave */}
-              {profileData.pinned_wave_id && myWaves.find(w => w.id === profileData.pinned_wave_id) && (
+              {/* Pinned Wave (rendered only on original Waves tab) */}
+              {activeTab === 'Waves' && profileData.pinned_wave_id && activeList.find(w => w.id === profileData.pinned_wave_id) && (
                 <div className="space-y-2">
-                  <div className="flex items-center gap-1.5 text-xs font-bold text-yellow-600 dark:text-yellow-400 pl-4">
+                  <div className="flex items-center gap-1.5 text-xs font-bold text-primary pl-4">
                     <span>📌</span>
                     <span>Pinned Wave</span>
                   </div>
                   <WaveCard 
-                    wave={myWaves.find(w => w.id === profileData.pinned_wave_id)} 
+                    wave={activeList.find(w => w.id === profileData.pinned_wave_id)} 
                     onRefresh={fetchProfile} 
                   />
                 </div>
               )}
 
-              {/* Remaining Waves */}
-              {myWaves
-                .filter(w => w.id !== profileData.pinned_wave_id)
+              {/* Remaining List */}
+              {activeList
+                .filter(w => activeTab !== 'Waves' || w.id !== profileData.pinned_wave_id)
                 .map((wave) => (
                   <WaveCard key={wave.id} wave={wave} onRefresh={fetchProfile} />
                 ))}
@@ -400,492 +458,414 @@ export default function ProfilePage() {
           )}
         </div>
 
-        {/* Edit profile dialog modal */}
-        {showEditModal && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 backdrop-blur-sm p-4 overflow-y-auto">
-            <div className="w-full max-w-lg rounded-3xl border border-slate-200/60 bg-white p-6 shadow-xl dark:border-slate-850 dark:bg-slate-900/90 animate-fadeIn">
-              <h3 className="text-lg font-bold mb-4">Edit Profile Settings</h3>
-              
-              {/* Image Previews & Custom Upload */}
-              <div className="flex gap-4 mb-6">
-                <div className="flex-1">
-                  <span className="block text-xs font-bold text-slate-500 uppercase mb-2">Avatar Image</span>
+        {/* Edit Profile Modal */}
+        <Modal
+          open={showEditModal}
+          onClose={() => setShowEditModal(false)}
+          title="Edit Profile Settings"
+          maxWidth={540}
+        >
+          <div className="max-h-[70vh] overflow-y-auto pr-1">
+            <form onSubmit={handleUpdateProfile} className="space-y-4 font-body text-xs font-bold text-text-secondary">
+              {updateError && (
+                <div className="rounded-xl bg-danger/10 p-3 border border-danger/25 text-danger">
+                  {updateError}
+                </div>
+              )}
+
+              {/* Avatar & Cover updates */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <span className="block uppercase tracking-wider text-text-muted">Avatar Image</span>
                   <div className="flex items-center gap-3">
-                    <div className="h-16 w-16 rounded-full overflow-hidden bg-slate-100 border border-slate-200 dark:border-slate-800 flex items-center justify-center font-bold">
+                    <div className="h-12 w-12 rounded-full overflow-hidden border border-card-border bg-surface shrink-0">
                       {avatarPreview ? (
-                        <img src={avatarPreview} alt="Avatar Preview" className="h-full w-full object-cover" />
+                        <img src={avatarPreview} alt="Avatar" className="h-full w-full object-cover" />
                       ) : (
-                        'None'
+                        <div className="h-full w-full bg-slate-200" />
                       )}
                     </div>
-                    <div className="space-y-1">
-                      <input 
-                        type="file" 
-                        accept="image/*" 
-                        id="avatar-upload" 
-                        className="hidden" 
-                        onChange={(e) => {
-                          const file = e.target.files?.[0];
-                          if (file) {
-                            setAvatarFile(file);
-                            setAvatarPreview(URL.createObjectURL(file));
-                          }
-                        }}
-                      />
-                      <label htmlFor="avatar-upload" className="block text-xs px-3 py-1.5 bg-aqua text-white rounded-lg cursor-pointer font-semibold text-center hover:bg-ocean">
-                        Upload
-                      </label>
-                      {avatarPreview && (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setAvatarFile(null);
-                            setAvatarPreview(null);
-                          }}
-                          className="block text-[10px] text-red-500 hover:underline font-semibold"
-                        >
-                          Remove
-                        </button>
-                      )}
-                    </div>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          setAvatarFile(file);
+                          setAvatarPreview(URL.createObjectURL(file));
+                        }
+                      }}
+                      className="text-[10px] w-full"
+                    />
                   </div>
                 </div>
 
-                <div className="flex-1">
-                  <span className="block text-xs font-bold text-slate-500 uppercase mb-2">Cover Image</span>
+                <div className="space-y-2">
+                  <span className="block uppercase tracking-wider text-text-muted">Cover Photo</span>
                   <div className="flex items-center gap-3">
-                    <div className="h-16 w-24 rounded-lg overflow-hidden bg-slate-100 border border-slate-200 dark:border-slate-800 flex items-center justify-center font-bold text-xs">
+                    <div className="h-12 w-20 rounded-xl overflow-hidden border border-card-border bg-surface shrink-0">
                       {coverPreview ? (
-                        <img src={coverPreview} alt="Cover Preview" className="h-full w-full object-cover" />
+                        <img src={coverPreview} alt="Cover" className="h-full w-full object-cover" />
                       ) : (
-                        'None'
+                        <div className="h-full w-full bg-slate-200" />
                       )}
                     </div>
-                    <div className="space-y-1">
-                      <input 
-                        type="file" 
-                        accept="image/*" 
-                        id="cover-upload" 
-                        className="hidden" 
-                        onChange={(e) => {
-                          const file = e.target.files?.[0];
-                          if (file) {
-                            setCoverFile(file);
-                            setCoverPreview(URL.createObjectURL(file));
-                          }
-                        }}
-                      />
-                      <label htmlFor="cover-upload" className="block text-xs px-3 py-1.5 bg-aqua text-white rounded-lg cursor-pointer font-semibold text-center hover:bg-ocean">
-                        Upload
-                      </label>
-                      {coverPreview && (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setCoverFile(null);
-                            setCoverPreview(null);
-                          }}
-                          className="block text-[10px] text-red-500 hover:underline font-semibold"
-                        >
-                          Remove
-                        </button>
-                      )}
-                    </div>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          setCoverFile(file);
+                          setCoverPreview(URL.createObjectURL(file));
+                        }
+                      }}
+                      className="text-[10px] w-full"
+                    />
                   </div>
                 </div>
               </div>
 
-              <form onSubmit={handleUpdateProfile} className="space-y-4">
-                {updateError && (
-                  <div className="rounded-xl bg-red-50/50 p-3 border border-red-100 dark:bg-red-950/20 dark:border-red-900/30 text-xs text-red-600 dark:text-red-400">
-                    {updateError}
-                  </div>
-                )}
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">
-                      Display Name
-                    </label>
-                    <input
-                      type="text"
-                      value={fullName}
-                      onChange={(e) => setFullName(e.target.value)}
-                      className="w-full text-sm rounded-2xl border border-slate-200 px-4 py-2 outline-none dark:border-slate-800 dark:bg-slate-950/40 dark:text-slate-200"
-                      placeholder="Display Name"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">
-                      Location
-                    </label>
-                    <input
-                      type="text"
-                      value={location}
-                      onChange={(e) => setLocation(e.target.value)}
-                      className="w-full text-sm rounded-2xl border border-slate-200 px-4 py-2 outline-none dark:border-slate-800 dark:bg-slate-950/40 dark:text-slate-200"
-                      placeholder="Location"
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">
-                      Country
-                    </label>
-                    <input
-                      type="text"
-                      value={country}
-                      onChange={(e) => setCountry(e.target.value)}
-                      className="w-full text-sm rounded-2xl border border-slate-200 px-4 py-2 outline-none dark:border-slate-800 dark:bg-slate-950/40 dark:text-slate-200"
-                      placeholder="Country"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">
-                      Phone Number
-                    </label>
-                    <input
-                      type="text"
-                      value={phoneNumber}
-                      onChange={(e) => setPhoneNumber(e.target.value)}
-                      className="w-full text-sm rounded-2xl border border-slate-200 px-4 py-2 outline-none dark:border-slate-800 dark:bg-slate-950/40 dark:text-slate-200"
-                      placeholder="Phone Number"
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">
-                      Website
-                    </label>
-                    <input
-                      type="url"
-                      value={website}
-                      onChange={(e) => setWebsite(e.target.value)}
-                      className="w-full text-sm rounded-2xl border border-slate-200 px-4 py-2 outline-none dark:border-slate-800 dark:bg-slate-950/40 dark:text-slate-200"
-                      placeholder="https://example.com"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">
-                      Twitter / X
-                    </label>
-                    <input
-                      type="url"
-                      value={twitterUrl}
-                      onChange={(e) => setTwitterUrl(e.target.value)}
-                      className="w-full text-sm rounded-2xl border border-slate-200 px-4 py-2 outline-none dark:border-slate-800 dark:bg-slate-950/40 dark:text-slate-200"
-                      placeholder="https://x.com/username"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">
-                    GitHub Link
-                  </label>
+              {/* Text Fields */}
+              <div className="grid grid-cols-2 gap-4 pt-2 border-t border-card-border">
+                <div className="space-y-1">
+                  <label className="uppercase tracking-wider text-text-muted">Display Name</label>
                   <input
-                    type="url"
-                    value={githubUrl}
-                    onChange={(e) => setGithubUrl(e.target.value)}
-                    className="w-full text-sm rounded-2xl border border-slate-200 px-4 py-2 outline-none dark:border-slate-800 dark:bg-slate-950/40 dark:text-slate-200"
-                    placeholder="https://github.com/username"
+                    type="text"
+                    value={fullName}
+                    onChange={(e) => setFullName(e.target.value)}
+                    className="w-full text-sm rounded-xl border border-card-border px-4 py-2 outline-none dark:bg-slate-950/40 text-text-primary"
+                    placeholder="Enter display name"
                   />
                 </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">
-                    Bio
-                  </label>
+                <div className="space-y-1">
+                  <label className="uppercase tracking-wider text-text-muted">Location</label>
+                  <input
+                    type="text"
+                    value={location}
+                    onChange={(e) => setLocation(e.target.value)}
+                    className="w-full text-sm rounded-xl border border-card-border px-4 py-2 outline-none dark:bg-slate-950/40 text-text-primary"
+                    placeholder="City, State"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="uppercase tracking-wider text-text-muted">Country</label>
+                  <input
+                    type="text"
+                    value={country}
+                    onChange={(e) => setCountry(e.target.value)}
+                    className="w-full text-sm rounded-xl border border-card-border px-4 py-2 outline-none dark:bg-slate-950/40 text-text-primary"
+                    placeholder="Country"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="uppercase tracking-wider text-text-muted">Phone Number</label>
+                  <input
+                    type="text"
+                    value={phoneNumber}
+                    onChange={(e) => setPhoneNumber(e.target.value)}
+                    className="w-full text-sm rounded-xl border border-card-border px-4 py-2 outline-none dark:bg-slate-950/40 text-text-primary"
+                    placeholder="Phone number"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="uppercase tracking-wider text-text-muted">Website</label>
+                  <input
+                    type="text"
+                    value={website}
+                    onChange={(e) => setWebsite(e.target.value)}
+                    className="w-full text-sm rounded-xl border border-card-border px-4 py-2 outline-none dark:bg-slate-950/40 text-text-primary"
+                    placeholder="https://example.com"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="uppercase tracking-wider text-text-muted">Twitter URL</label>
+                  <input
+                    type="text"
+                    value={twitterUrl}
+                    onChange={(e) => setTwitterUrl(e.target.value)}
+                    className="w-full text-sm rounded-xl border border-card-border px-4 py-2 outline-none dark:bg-slate-950/40 text-text-primary"
+                    placeholder="https://twitter.com/..."
+                  />
+                </div>
+                <div className="space-y-1 col-span-2">
+                  <label className="uppercase tracking-wider text-text-muted">GitHub URL</label>
+                  <input
+                    type="text"
+                    value={githubUrl}
+                    onChange={(e) => setGithubUrl(e.target.value)}
+                    className="w-full text-sm rounded-xl border border-card-border px-4 py-2 outline-none dark:bg-slate-950/40 text-text-primary"
+                    placeholder="https://github.com/..."
+                  />
+                </div>
+                <div className="space-y-1 col-span-2">
+                  <label className="uppercase tracking-wider text-text-muted">Bio</label>
                   <textarea
                     value={bio}
                     onChange={(e) => setBio(e.target.value)}
                     rows={3}
                     maxLength={160}
-                    className="w-full text-sm rounded-2xl border border-slate-200 px-4 py-2 outline-none dark:border-slate-800 dark:bg-slate-950/40 resize-none dark:text-slate-200"
+                    className="w-full text-sm rounded-xl border border-card-border px-4 py-2 outline-none dark:bg-slate-950/40 text-text-primary resize-none"
                     placeholder="Tell your story..."
                   />
                 </div>
+              </div>
 
-                <div className="pt-4 border-t border-slate-100 dark:border-slate-800/40 space-y-3">
-                  <span className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">Account Settings</span>
-                  
-                  <div className="flex flex-col gap-2">
-                    {/* Change Password */}
-                    <div className="flex justify-between items-center rounded-2xl border border-slate-200 bg-slate-50/50 p-3 dark:border-slate-800 dark:bg-slate-950/20">
-                      <div className="text-left">
-                        <p className="text-xs font-bold text-text-primary">Change Password</p>
-                        <p className="text-[10px] text-text-secondary">Update your password regularly to secure your account.</p>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => setShowChangePasswordModal(true)}
-                        className="rounded-full border border-[#0891B2] bg-transparent px-3 py-1.5 text-xs font-bold text-[#0891B2] hover:bg-[#0891B2] hover:text-white transition-all"
-                      >
-                        Change Password
-                      </button>
+              {/* Account Settings Area */}
+              <div className="pt-4 border-t border-card-border space-y-3">
+                <span className="block uppercase tracking-wider text-text-muted mb-2">Account Management</span>
+                
+                <div className="flex flex-col gap-2">
+                  {/* Change Password */}
+                  <div className="flex justify-between items-center rounded-xl border border-card-border bg-surface/30 p-3">
+                    <div className="text-left max-w-[65%]">
+                      <p className="text-xs font-bold text-text-primary">Change Password</p>
+                      <p className="text-[10px] text-text-muted leading-tight font-semibold">Update your password regularly to secure your account.</p>
                     </div>
-
-                    {/* Deactivate Account */}
-                    <div className="flex justify-between items-center rounded-2xl border border-yellow-200/50 bg-yellow-50/5 p-3 dark:border-yellow-900/30">
-                      <div className="text-left">
-                        <p className="text-xs font-bold text-yellow-600 dark:text-yellow-500">Deactivate Account</p>
-                        <p className="text-[10px] text-text-secondary">Temporarily deactivate your account. Hide your profile and waves.</p>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => setShowDeactivateConfirm(true)}
-                        className="rounded-full bg-yellow-500/10 px-3 py-1.5 text-xs font-bold text-yellow-600 dark:text-yellow-500 hover:bg-yellow-500 hover:text-white transition-all"
-                      >
-                        Deactivate
-                      </button>
-                    </div>
-
-                    {/* Delete Account */}
-                    <div className="flex justify-between items-center rounded-2xl border border-red-200/50 bg-red-50/5 p-3 dark:border-red-900/30">
-                      <div className="text-left">
-                        <p className="text-xs font-bold text-red-500">Delete Account</p>
-                        <p className="text-[10px] text-text-secondary">Permanently delete your account. This action is irreversible.</p>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => setShowDeleteConfirm(true)}
-                        className="rounded-full bg-red-500/10 px-3 py-1.5 text-xs font-bold text-red-500 hover:bg-red-500 hover:text-white transition-all"
-                      >
-                        Delete Account
-                      </button>
-                    </div>
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => setShowChangePasswordModal(true)}
+                      className="rounded-full px-3 py-1.5 text-xs font-bold"
+                    >
+                      Change Password
+                    </Button>
                   </div>
-                </div>
 
-                <div className="flex justify-end items-center pt-4 border-t border-slate-100 dark:border-slate-800/40">
-                  <div className="flex gap-2">
+                  {/* Deactivate Account */}
+                  <div className="flex justify-between items-center rounded-xl border border-warning/20 bg-warning/5 p-3">
+                    <div className="text-left max-w-[65%]">
+                      <p className="text-xs font-bold text-warning">Deactivate Account</p>
+                      <p className="text-[10px] text-text-muted leading-tight font-semibold">Temporarily deactivate your account. Hide profile & waves.</p>
+                    </div>
                     <button
                       type="button"
-                      disabled={updatingImages}
-                      onClick={() => setShowEditModal(false)}
-                      className="rounded-full px-4 py-2 text-xs font-bold border hover:bg-slate-50 dark:hover:bg-slate-800 dark:border-slate-800"
+                      onClick={() => setShowDeactivateConfirm(true)}
+                      className="rounded-full bg-warning/10 px-3 py-1.5 text-xs font-bold text-warning hover:bg-warning hover:text-white transition-all duration-200"
                     >
-                      Cancel
+                      Deactivate
                     </button>
+                  </div>
+
+                  {/* Delete Account */}
+                  <div className="flex justify-between items-center rounded-xl border border-danger/20 bg-danger/5 p-3">
+                    <div className="text-left max-w-[65%]">
+                      <p className="text-xs font-bold text-danger">Delete Account</p>
+                      <p className="text-[10px] text-text-muted leading-tight font-semibold">Permanently delete your account. Irreversible action.</p>
+                    </div>
                     <button
-                      type="submit"
-                      disabled={updatingImages}
-                      className="rounded-full bg-aqua px-4 py-2 text-xs font-bold text-white hover:bg-ocean flex items-center gap-1.5"
+                      type="button"
+                      onClick={() => setShowDeleteConfirm(true)}
+                      className="rounded-full bg-danger/10 px-3 py-1.5 text-xs font-bold text-danger hover:bg-danger hover:text-white transition-all duration-200"
                     >
-                      {updatingImages ? 'Saving...' : 'Save Changes'}
+                      Delete Account
                     </button>
                   </div>
                 </div>
-              </form>
-            </div>
+              </div>
+
+              {/* Form Buttons */}
+              <div className="flex justify-end items-center pt-4 border-t border-card-border gap-2">
+                <Button
+                  type="button"
+                  disabled={updatingImages}
+                  onClick={() => setShowEditModal(false)}
+                  variant="ghost"
+                  className="rounded-full"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={updatingImages}
+                  className="rounded-full"
+                >
+                  {updatingImages ? 'Saving...' : 'Save Changes'}
+                </Button>
+              </div>
+            </form>
           </div>
-        )}
+        </Modal>
 
         {/* Change Password Modal */}
-        {showChangePasswordModal && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 backdrop-blur-sm p-4">
-            <div className="w-full max-w-md rounded-3xl border border-slate-200/60 bg-white p-6 shadow-xl dark:border-slate-850 dark:bg-slate-900/90 animate-fadeIn">
-              <h3 className="text-lg font-bold text-text-primary mb-2">Change Password</h3>
-              
-              {changePasswordError && (
-                <div className="mb-4 rounded-xl bg-red-50/50 p-3 border border-red-100 dark:bg-red-950/20 dark:border-red-900/30 text-xs text-red-600 dark:text-red-400">
-                  {changePasswordError}
-                </div>
-              )}
-              {changePasswordSuccess && (
-                <div className="mb-4 rounded-xl bg-green-50/50 p-3 border border-green-100 dark:bg-green-950/20 dark:border-green-900/30 text-xs text-green-600 dark:text-green-400">
-                  {changePasswordSuccess}
-                </div>
-              )}
-
-              <form onSubmit={handleChangePassword} className="space-y-4">
-                <div>
-                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">
-                    Current Password
-                  </label>
-                  <input
-                    type="password"
-                    value={currentPassword}
-                    onChange={(e) => setCurrentPassword(e.target.value)}
-                    required
-                    className="w-full text-sm rounded-2xl border border-slate-200 px-4 py-2 outline-none dark:border-slate-800 dark:bg-slate-950/40 dark:text-slate-200"
-                    placeholder="Enter current password"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">
-                    New Password
-                  </label>
-                  <input
-                    type="password"
-                    value={newPassword}
-                    onChange={(e) => setNewPassword(e.target.value)}
-                    required
-                    className="w-full text-sm rounded-2xl border border-slate-200 px-4 py-2 outline-none dark:border-slate-800 dark:bg-slate-950/40 dark:text-slate-200"
-                    placeholder="Enter new password (min 8 chars)"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">
-                    Confirm New Password
-                  </label>
-                  <input
-                    type="password"
-                    value={confirmNewPassword}
-                    onChange={(e) => setConfirmNewPassword(e.target.value)}
-                    required
-                    className="w-full text-sm rounded-2xl border border-slate-200 px-4 py-2 outline-none dark:border-slate-800 dark:bg-slate-950/40 dark:text-slate-200"
-                    placeholder="Confirm new password"
-                  />
-                </div>
-
-                <div className="flex justify-end gap-2 pt-2">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setShowChangePasswordModal(false);
-                      setCurrentPassword('');
-                      setNewPassword('');
-                      setConfirmNewPassword('');
-                      setChangePasswordError(null);
-                      setChangePasswordSuccess(null);
-                    }}
-                    className="rounded-full px-4 py-2 text-xs font-bold border hover:bg-slate-50 dark:hover:bg-slate-800 dark:border-slate-800"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={changingPassword}
-                    className="rounded-full bg-aqua text-white px-4 py-2 text-xs font-bold hover:bg-ocean disabled:opacity-50"
-                  >
-                    {changingPassword ? 'Updating...' : 'Change Password'}
-                  </button>
-                </div>
-              </form>
+        <Modal
+          open={showChangePasswordModal}
+          onClose={() => {
+            setShowChangePasswordModal(false);
+            setChangePasswordError(null);
+            setChangePasswordSuccess(null);
+          }}
+          title="Change Password"
+        >
+          {changePasswordError && (
+            <div className="mb-4 rounded-xl bg-danger/10 p-3 border border-danger/25 text-xs text-danger font-bold">
+              {changePasswordError}
             </div>
-          </div>
-        )}
-
-        {/* Deactivate Account Confirmation Modal */}
-        {showDeactivateConfirm && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 backdrop-blur-sm p-4">
-            <div className="w-full max-w-md rounded-3xl border border-slate-200/60 bg-white p-6 shadow-xl dark:border-slate-850 dark:bg-slate-900/90 animate-fadeIn">
-              <h3 className="text-lg font-bold text-yellow-600 mb-2">Deactivate Account</h3>
-              <p className="text-xs text-slate-500 dark:text-slate-400 mb-4 leading-relaxed font-semibold">
-                This will temporarily deactivate your profile and waves. You can reactivate your account at any time by logging back in, but ONLY after a 7-day break cooldown. Please enter your password to confirm.
-              </p>
-              
-              {deactivateError && (
-                <div className="mb-4 rounded-xl bg-red-50/50 p-3 border border-red-100 dark:bg-red-950/20 dark:border-red-900/30 text-xs text-red-600 dark:text-red-400">
-                  {deactivateError}
-                </div>
-              )}
-
-              <form onSubmit={handleDeactivateAccount} className="space-y-4">
-                <div>
-                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">
-                    Confirm Password
-                  </label>
-                  <input
-                    type="password"
-                    value={deactivatePassword}
-                    onChange={(e) => setDeactivatePassword(e.target.value)}
-                    required
-                    className="w-full text-sm rounded-2xl border border-slate-200 px-4 py-2 outline-none dark:border-slate-800 dark:bg-slate-950/40 dark:text-slate-200"
-                    placeholder="Enter password"
-                  />
-                </div>
-
-                <div className="flex justify-end gap-2 pt-2">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setShowDeactivateConfirm(false);
-                      setDeactivatePassword('');
-                      setDeactivateError(null);
-                    }}
-                    className="rounded-full px-4 py-2 text-xs font-bold border hover:bg-slate-50 dark:hover:bg-slate-800 dark:border-slate-800"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={deactivatingAccount}
-                    className="rounded-full bg-yellow-500 text-white px-4 py-2 text-xs font-bold hover:bg-yellow-600 disabled:opacity-50"
-                  >
-                    {deactivatingAccount ? 'Deactivating...' : 'Confirm Deactivation'}
-                  </button>
-                </div>
-              </form>
+          )}
+          {changePasswordSuccess && (
+            <div className="mb-4 rounded-xl bg-success/10 p-3 border border-success/25 text-xs text-success font-bold">
+              {changePasswordSuccess}
             </div>
-          </div>
-        )}
+          )}
 
-        {/* Delete Account Confirmation Modal */}
-        {showDeleteConfirm && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 backdrop-blur-sm p-4">
-            <div className="w-full max-w-md rounded-3xl border border-slate-200/60 bg-white p-6 shadow-xl dark:border-slate-850 dark:bg-slate-900/90 animate-fadeIn">
-              <h3 className="text-lg font-bold text-red-500 mb-2">Delete Account</h3>
-              <p className="text-xs text-slate-500 dark:text-slate-400 mb-4 leading-relaxed font-semibold">
-                Warning: This action will permanently delete your account and all associated data. This action is irreversible. Please enter your password to confirm.
-              </p>
-              
-              {deleteError && (
-                <div className="mb-4 rounded-xl bg-red-50/50 p-3 border border-red-100 dark:bg-red-950/20 dark:border-red-900/30 text-xs text-red-600 dark:text-red-400">
-                  {deleteError}
-                </div>
-              )}
-
-              <form onSubmit={handleDeleteAccount} className="space-y-4">
-                <div>
-                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">
-                    Confirm Password
-                  </label>
-                  <input
-                    type="password"
-                    value={deletePassword}
-                    onChange={(e) => setDeletePassword(e.target.value)}
-                    required
-                    className="w-full text-sm rounded-2xl border border-slate-200 px-4 py-2 outline-none dark:border-slate-800 dark:bg-slate-950/40 dark:text-slate-200"
-                    placeholder="Enter password"
-                  />
-                </div>
-
-                <div className="flex justify-end gap-2 pt-2">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setShowDeleteConfirm(false);
-                      setDeletePassword('');
-                      setDeleteError(null);
-                    }}
-                    className="rounded-full px-4 py-2 text-xs font-bold border hover:bg-slate-50 dark:hover:bg-slate-800 dark:border-slate-800"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={deactivating}
-                    className="rounded-full bg-red-500 text-white px-4 py-2 text-xs font-bold hover:bg-red-600 disabled:opacity-50"
-                  >
-                    {deactivating ? 'Deleting...' : 'Confirm Permanent Deletion'}
-                  </button>
-                </div>
-              </form>
+          <form onSubmit={handleChangePassword} className="space-y-4 font-body text-xs font-bold text-text-secondary">
+            <div className="space-y-1">
+              <label className="uppercase tracking-wider text-text-muted">Current Password</label>
+              <input
+                type="password"
+                value={currentPassword}
+                onChange={(e) => setCurrentPassword(e.target.value)}
+                required
+                className="w-full text-sm rounded-xl border border-card-border px-4 py-2 outline-none dark:bg-slate-950/40 text-text-primary"
+                placeholder="Enter current password"
+              />
             </div>
-          </div>
-        )}
+            <div className="space-y-1">
+              <label className="uppercase tracking-wider text-text-muted">New Password</label>
+              <input
+                type="password"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                required
+                className="w-full text-sm rounded-xl border border-card-border px-4 py-2 outline-none dark:bg-slate-950/40 text-text-primary"
+                placeholder="Enter new password (min 8 chars)"
+              />
+            </div>
+            <div className="space-y-1">
+              <label className="uppercase tracking-wider text-text-muted">Confirm New Password</label>
+              <input
+                type="password"
+                value={confirmNewPassword}
+                onChange={(e) => setConfirmNewPassword(e.target.value)}
+                required
+                className="w-full text-sm rounded-xl border border-card-border px-4 py-2 outline-none dark:bg-slate-950/40 text-text-primary"
+                placeholder="Confirm new password"
+              />
+            </div>
+
+            <div className="flex justify-end gap-2 pt-4 border-t border-card-border">
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() => setShowChangePasswordModal(false)}
+                className="rounded-full"
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                disabled={changingPassword}
+                className="rounded-full"
+              >
+                {changingPassword ? 'Saving...' : 'Save'}
+              </Button>
+            </div>
+          </form>
+        </Modal>
+
+        {/* Deactivate Confirm */}
+        <Modal
+          open={showDeactivateConfirm}
+          onClose={() => setShowDeactivateConfirm(false)}
+          title="Deactivate Account"
+        >
+          {deactivateError && (
+            <div className="mb-4 rounded-xl bg-danger/10 p-3 border border-danger/25 text-xs text-danger font-bold">
+              {deactivateError}
+            </div>
+          )}
+          <p className="text-xs text-text-secondary mb-4 leading-relaxed font-semibold">
+            Are you sure you want to deactivate your account? This will hide your profile, waves, and joins until you log in again.
+          </p>
+
+          <form onSubmit={handleDeactivateAccount} className="space-y-4 font-body text-xs font-bold text-text-secondary">
+            <div className="space-y-1">
+              <label className="uppercase tracking-wider text-text-muted">Confirm Password</label>
+              <input
+                type="password"
+                value={deactivatePassword}
+                onChange={(e) => setDeactivatePassword(e.target.value)}
+                required
+                className="w-full text-sm rounded-xl border border-card-border px-4 py-2 outline-none dark:bg-slate-950/40 text-text-primary"
+                placeholder="Enter password"
+              />
+            </div>
+
+            <div className="flex justify-end gap-2 pt-4 border-t border-card-border">
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() => setShowDeactivateConfirm(false)}
+                className="rounded-full"
+              >
+                Cancel
+              </Button>
+              <button
+                type="submit"
+                disabled={deactivatingAccount}
+                className="rounded-full bg-warning px-5 py-2 text-xs font-bold text-white shadow-sm hover:opacity-90 transition-all"
+              >
+                {deactivatingAccount ? 'Deactivating...' : 'Confirm Deactivation'}
+              </button>
+            </div>
+          </form>
+        </Modal>
+
+        {/* Delete Confirm */}
+        <Modal
+          open={showDeleteConfirm}
+          onClose={() => setShowDeleteConfirm(false)}
+          title="Delete Account"
+        >
+          {deleteError && (
+            <div className="mb-4 rounded-xl bg-danger/10 p-3 border border-danger/25 text-xs text-danger font-bold">
+              {deleteError}
+            </div>
+          )}
+          <p className="text-xs text-danger mb-4 leading-relaxed font-bold">
+            ⚠️ WARNING: This will permanently delete your account, waves, circles, DMs, and bookmarks. This action cannot be undone.
+          </p>
+
+          <form onSubmit={handleDeleteAccount} className="space-y-4 font-body text-xs font-bold text-text-secondary">
+            <div className="space-y-1">
+              <label className="uppercase tracking-wider text-text-muted">Confirm Password</label>
+              <input
+                type="password"
+                value={deletePassword}
+                onChange={(e) => setDeletePassword(e.target.value)}
+                required
+                className="w-full text-sm rounded-xl border border-card-border px-4 py-2 outline-none dark:bg-slate-950/40 text-text-primary"
+                placeholder="Enter password"
+              />
+            </div>
+
+            <div className="flex justify-end gap-2 pt-4 border-t border-card-border">
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() => setShowDeleteConfirm(false)}
+                className="rounded-full"
+              >
+                Cancel
+              </Button>
+              <button
+                type="submit"
+                disabled={deactivating}
+                className="rounded-full bg-danger px-5 py-2 text-xs font-bold text-white shadow-sm hover:opacity-90 transition-all"
+              >
+                {deactivating ? 'Deleting...' : 'Permanently Delete'}
+              </button>
+            </div>
+          </form>
+        </Modal>
 
         {/* Follow modal lists */}
         {showFollowModal && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 backdrop-blur-sm p-4">
-            <div className="w-full max-w-md rounded-3xl border border-slate-200/60 bg-white p-6 shadow-xl dark:border-slate-850 dark:bg-slate-900/90 animate-fadeIn flex flex-col max-h-[80vh]">
-              <div className="flex justify-between items-center mb-4 border-b border-slate-100 dark:border-slate-800/40 pb-3">
-                <h3 className="text-lg font-bold capitalize">
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/60 backdrop-blur-md p-4">
+            <div className="w-full max-w-md rounded-dialog border border-card-border bg-card-bg p-6 shadow-lg animate-in fade-in-0 zoom-in-95 duration-200 flex flex-col max-h-[85vh] font-body">
+              <div className="flex justify-between items-center mb-4 border-b border-card-border pb-3">
+                <h3 className="text-base font-black text-text-primary font-display capitalize">
                   {followModalType === 'riding' ? 'Riding' : 'Wave Riders'}
                 </h3>
                 <button 
@@ -893,7 +873,7 @@ export default function ProfilePage() {
                     setShowFollowModal(false);
                     setFollowList([]);
                   }}
-                  className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-sm font-bold"
+                  className="p-1.5 rounded-full hover:bg-card-border/30 text-text-secondary hover:text-text-primary text-xs font-bold transition-all"
                 >
                   ✕
                 </button>
@@ -902,33 +882,33 @@ export default function ProfilePage() {
               <div className="flex-1 overflow-y-auto space-y-4 pr-1">
                 {followLoading ? (
                   <div className="text-center py-8">
-                    <svg className="animate-spin h-6 w-6 text-aqua mx-auto" fill="none" viewBox="0 0 24 24">
+                    <svg className="animate-spin h-6 w-6 text-primary mx-auto" fill="none" viewBox="0 0 24 24">
                       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                     </svg>
                   </div>
                 ) : followList.length === 0 ? (
-                  <p className="text-center text-xs text-slate-400 py-8">No riders here yet.</p>
+                  <p className="text-center text-xs text-text-muted py-8 font-bold select-none">No riders here yet.</p>
                 ) : (
                   followList.map((member) => (
-                    <div key={member.id} className="flex items-center justify-between">
+                    <div key={member.id} className="flex items-center justify-between gap-3">
                       <Link 
                         href={`/you/${member.username}`} 
                         onClick={() => setShowFollowModal(false)}
-                        className="flex items-center gap-3 group cursor-pointer"
+                        className="flex items-center gap-3 group cursor-pointer truncate"
                       >
-                        <div className="h-10 w-10 rounded-full bg-gradient-to-tr from-ocean to-aqua flex items-center justify-center text-white text-xs font-bold overflow-hidden">
+                        <div className="h-9 w-9 rounded-full bg-gradient-to-tr from-secondary to-primary flex items-center justify-center text-white text-xs font-bold overflow-hidden shrink-0 shadow-sm">
                           {member.avatar_url ? (
                             <img src={member.avatar_url} alt="Avatar" className="h-full w-full object-cover" />
                           ) : (
                             member.username[0].toUpperCase()
                           )}
                         </div>
-                        <div>
-                          <p className="text-sm font-bold leading-none group-hover:underline">
+                        <div className="truncate">
+                          <p className="text-xs font-bold leading-none group-hover:underline text-text-primary truncate">
                             {member.full_name || member.username}
                           </p>
-                          <p className="text-xs text-slate-400">@{member.username}</p>
+                          <p className="text-[10px] text-text-muted mt-0.5">@{member.username}</p>
                         </div>
                       </Link>
                     </div>

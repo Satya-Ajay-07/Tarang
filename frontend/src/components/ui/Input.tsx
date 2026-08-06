@@ -18,23 +18,23 @@ interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
 }
 
 export const Input = forwardRef<HTMLInputElement, InputProps>(
-  ({ label, error, hint, leftIcon, rightIcon, className = '', id, ...rest }, ref) => {
+  ({ label, error, hint, leftIcon, rightIcon, className = '', id, disabled, ...rest }, ref) => {
     const inputId = id ?? label?.toLowerCase().replace(/\s+/g, '-');
 
     return (
-      <div className="flex flex-col gap-1.5">
+      <div className="flex flex-col gap-1.5 w-full">
         {label && (
           <label
             htmlFor={inputId}
-            className="text-xs font-semibold text-slate-400 uppercase tracking-wider"
+            className="text-xs font-bold text-text-secondary uppercase tracking-wider select-none"
           >
             {label}
           </label>
         )}
 
-        <div className="relative flex items-center">
+        <div className="relative flex items-center w-full">
           {leftIcon && (
-            <span className="absolute left-3 text-slate-400 pointer-events-none">
+            <span className="absolute left-3.5 text-text-muted pointer-events-none transition-colors">
               {leftIcon}
             </span>
           )}
@@ -42,33 +42,35 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
           <input
             ref={ref}
             id={inputId}
+            disabled={disabled}
             className={[
-              'w-full bg-white/5 border rounded-xl text-sm text-slate-100 placeholder-slate-500',
-              'px-3 py-2.5',
+              'w-full bg-surface/40 border rounded-input text-sm text-text-primary placeholder-text-muted',
+              'px-3.5 py-3',
               'transition-all duration-200',
-              'focus:outline-none focus:ring-2 focus:ring-aqua/50 focus:border-aqua/50',
-              leftIcon ? 'pl-9' : '',
-              rightIcon ? 'pr-9' : '',
+              'focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary focus:bg-surface/80',
+              'disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-card-border/10',
+              leftIcon ? 'pl-10' : '',
+              rightIcon ? 'pr-10' : '',
               error
-                ? 'border-red-500/50 focus:ring-red-500/30 focus:border-red-500/50'
-                : 'border-white/10 hover:border-white/20',
+                ? 'border-danger/60 focus:ring-danger/20 focus:border-danger bg-danger/5'
+                : 'border-card-border hover:border-text-secondary/30',
               className,
             ].join(' ')}
             {...rest}
           />
 
           {rightIcon && (
-            <span className="absolute right-3 text-slate-400">
+            <span className="absolute right-3.5 text-text-muted">
               {rightIcon}
             </span>
           )}
         </div>
 
         {hint && !error && (
-          <p className="text-xs text-slate-500">{hint}</p>
+          <p className="text-xs text-text-muted">{hint}</p>
         )}
         {error && (
-          <p className="text-xs text-red-400" role="alert">
+          <p className="text-xs font-medium text-danger" role="alert">
             {error}
           </p>
         )}

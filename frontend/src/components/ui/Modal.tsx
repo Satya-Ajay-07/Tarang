@@ -74,11 +74,11 @@ export function Modal({
       }}
     >
       {/* Backdrop */}
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" aria-hidden="true" />
+      <div className="absolute inset-0 bg-background/60 backdrop-blur-md" aria-hidden="true" />
 
       {/* Panel */}
       <div
-        className="relative w-full bg-card-bg border border-card-border rounded-2xl shadow-2xl overflow-hidden animate-in fade-in-0 zoom-in-95 duration-200"
+        className="relative w-full bg-card-bg border border-card-border rounded-dialog shadow-lg overflow-hidden animate-in fade-in-0 zoom-in-95 duration-200"
         style={{ maxWidth }}
       >
         {/* Header */}
@@ -87,7 +87,7 @@ export function Modal({
             {title && (
               <h2
                 id="modal-title"
-                className="text-lg font-bold text-text-primary"
+                className="text-lg font-bold text-text-primary font-display"
               >
                 {title}
               </h2>
@@ -106,11 +106,11 @@ export function Modal({
         {/* Close button */}
         <button
           onClick={onClose}
-          className="absolute top-4 right-4 p-1.5 rounded-lg text-text-secondary hover:text-text-primary hover:bg-black/5 dark:hover:bg-white/5 transition-colors"
+          className="absolute top-4 right-4 p-2 rounded-full text-text-secondary hover:text-text-primary hover:bg-card-border/30 transition-colors"
           aria-label="Close modal"
         >
           <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
           </svg>
         </button>
       </div>

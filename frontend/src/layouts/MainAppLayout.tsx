@@ -7,6 +7,10 @@ import { apiRequest } from '@/services/api';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 
+// Module-level caching for sidebar requests to eliminate duplicate/redundant fetches on page navigations
+let lastFetchedTime = 0;
+let cachedSidebarData: { unreadAlerts: number; risingWaves: any[]; suggestedRiders: any[] } | null = null;
+
 export default function MainAppLayout({ children }: { children: React.ReactNode }) {
   const { user, logout } = useAuth();
   const pathname = usePathname();
@@ -16,36 +20,49 @@ export default function MainAppLayout({ children }: { children: React.ReactNode 
   const [suggestedRiders, setSuggestedRiders] = useState<any[]>([]);
   const [isDarkMode, setIsDarkMode] = useState(true);
 
-  // Poll alerts count and suggestions
+  // Poll alerts count and suggestions with memory caching
   useEffect(() => {
     if (!user) return;
 
     const fetchSidebarData = async () => {
+      const now = Date.now();
+      // If cached data is fresh (fetched within the last 15 seconds), reuse it to avoid duplicate API calls
+      if (cachedSidebarData && (now - lastFetchedTime < 15000)) {
+        setUnreadAlerts(cachedSidebarData.unreadAlerts);
+        setRisingWaves(cachedSidebarData.risingWaves);
+        setSuggestedRiders(cachedSidebarData.suggestedRiders);
+        return;
+      }
+
       try {
         // Fetch unread alerts
         const alertsRes = await apiRequest('/alerts');
+        let unread = 0;
         if (alertsRes.ok) {
           const alertsData = await alertsRes.json();
-          setUnreadAlerts(alertsData.filter((a: any) => !a.is_read).length);
+          unread = alertsData.filter((a: any) => !a.is_read).length;
+          setUnreadAlerts(unread);
         }
 
         // Fetch rising waves
+        let rising: any[] = [];
         const risingRes = await apiRequest('/waves/rising?limit=3');
         if (risingRes.ok) {
-          const risingData = await risingRes.json();
-          setRisingWaves(risingData);
+          rising = await risingRes.json();
+          setRisingWaves(rising);
         }
 
         // Fetch suggested riders
+        let riders: any[] = [];
         const suggestionRes = await apiRequest('/explore/suggested-riders?limit=4');
         if (suggestionRes.ok) {
-          const suggestions = await suggestionRes.json();
-          setSuggestedRiders(suggestions);
-        } else {
-          // API unavailable — show nothing rather than fake data
-          console.error(`[Tarang] Suggested Riders fetch failed: HTTP ${suggestionRes.status}`);
-          setSuggestedRiders([]);
+          riders = await suggestionRes.json();
+          setSuggestedRiders(riders);
         }
+
+        // Save to cache
+        lastFetchedTime = Date.now();
+        cachedSidebarData = { unreadAlerts: unread, risingWaves: rising, suggestedRiders: riders };
       } catch (err) {
         console.error(err);
       }
@@ -88,6 +105,9 @@ export default function MainAppLayout({ children }: { children: React.ReactNode 
       const res = await apiRequest(`/users/ride/${riderId}`, { method: 'POST' });
       if (res.ok) {
         setSuggestedRiders(prev => prev.filter(r => r.id !== riderId));
+        // Invalidate cache immediately on action
+        cachedSidebarData = null;
+        lastFetchedTime = 0;
       }
     } catch (err) {
       console.error(err);
@@ -102,40 +122,118 @@ export default function MainAppLayout({ children }: { children: React.ReactNode 
     { name: 'Wave Circles', path: '/circles', icon: '🎯' },
     { name: 'Saved', path: '/saved', icon: '🔖' },
     { name: 'You', path: '/you', icon: '👤' },
+    { name: 'Settings', path: '/settings', icon: '⚙️' },
   ];
 
   if (!user) return null;
 
   return (
-    <div className="flex min-h-screen bg-[var(--background)] text-[var(--text-primary)] transition-colors duration-200">
-      {/* Sidebar Navigation */}
-      <aside className="sticky top-0 h-screen w-64 border-r border-card-border bg-card-bg px-5 py-6 flex flex-col justify-between hidden md:flex shadow-[2px_0_12px_rgba(0,0,0,0.01)]">
-        <div className="space-y-8">
-          <div className="flex items-center pl-3">
-            <Logo size="md" />
+    <div className="min-h-screen bg-background text-text-primary transition-colors duration-200">
+      {/* Sticky Top Navbar with Glassmorphism */}
+      <header className="sticky top-0 z-40 w-full border-b border-card-border bg-background/80 backdrop-blur-md shadow-sm">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-4">
+          {/* Logo */}
+          <div className="flex items-center gap-3 cursor-pointer" onClick={() => router.push('/ocean')}>
+            <Logo size="sm" />
+            <span className="hidden sm:inline font-display font-black text-lg bg-gradient-to-r from-secondary to-primary bg-clip-text text-transparent select-none">
+              Tarang
+            </span>
           </div>
-          
-          <nav className="space-y-1.5">
+
+          {/* Search Box */}
+          <div className="flex-1 max-w-md hidden md:block">
+            <div className="relative">
+              <input
+                type="text"
+                placeholder="Search waves, riders, hashtags..."
+                className="w-full bg-surface/50 border border-card-border rounded-full pl-10 pr-4 py-1.5 text-xs text-text-primary focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary focus:bg-surface transition-all duration-200"
+                onClick={() => router.push('/discover')}
+                readOnly
+              />
+              <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-text-muted text-xs pointer-events-none">🔍</span>
+            </div>
+          </div>
+
+          {/* Actions */}
+          <div className="flex items-center gap-3">
+            {/* Compose Button */}
+            <Link href="/ocean" prefetch={true}>
+              <button className="hidden sm:flex items-center gap-2 rounded-full bg-gradient-to-r from-secondary to-primary hover:opacity-95 text-white px-4 py-1.5 text-xs font-bold shadow-sm transition-all active:scale-95">
+                <span>✍️</span>
+                <span>Compose</span>
+              </button>
+            </Link>
+
+            {/* Theme Toggle */}
+            <button
+              onClick={toggleTheme}
+              className="p-2 rounded-full border border-card-border hover:bg-card-border/30 text-text-secondary hover:text-text-primary transition-all duration-200"
+              title="Toggle Theme"
+            >
+              {isDarkMode ? '🌙' : '☀️'}
+            </button>
+
+            {/* Notification Bell */}
+            <Link href="/alerts" prefetch={true} className="relative p-2 rounded-full border border-card-border hover:bg-card-border/30 text-text-secondary hover:text-text-primary transition-all">
+              <span className="text-sm">🔔</span>
+              {unreadAlerts > 0 && (
+                <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-danger text-[9px] font-extrabold text-white animate-pulse">
+                  {unreadAlerts}
+                </span>
+              )}
+            </Link>
+
+            {/* Profile Avatar */}
+            <div className="relative flex items-center gap-2 pl-2 border-l border-card-border">
+              <Link href="/you" prefetch={true} className="h-8 w-8 rounded-full bg-gradient-to-tr from-secondary to-primary flex items-center justify-center text-white text-xs font-bold overflow-hidden shadow-sm shrink-0 hover:scale-105 transition-transform">
+                {user.avatar_url ? (
+                  <img src={user.avatar_url} alt="Avatar" className="h-full w-full object-cover" loading="lazy" />
+                ) : (
+                  user.username[0].toUpperCase()
+                )}
+              </Link>
+              
+              <button
+                onClick={logout}
+                className="p-1 text-text-secondary hover:text-danger transition-colors hidden sm:block"
+                title="Logout"
+              >
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                </svg>
+              </button>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      {/* Page Grid Container */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 flex gap-6">
+        {/* Left Sidebar */}
+        <aside className="hidden md:flex flex-col justify-between w-64 shrink-0 py-6 sticky top-16 h-[calc(100vh-64px)]">
+          {/* Navigation Items */}
+          <nav className="space-y-1">
             {navItems.map((item) => {
               const isActive = pathname.startsWith(item.path);
               return (
                 <Link
                   key={item.name}
                   href={item.path}
-                  className={`flex items-center justify-between rounded-xl px-4 py-2.5 text-sm font-bold tracking-wide transition-all ${
+                  prefetch={true}
+                  className={`flex items-center justify-between rounded-xl px-4 py-2.5 text-sm font-bold transition-all duration-200 group ${
                     isActive
-                      ? 'bg-[#E0F7FA] text-[#0891B2] dark:bg-aqua/10 dark:text-foam shadow-[0_2px_4px_rgba(8,145,178,0.05)]'
-                      : 'text-[#334155] hover:bg-[#F1F5F9] hover:text-[#0F172A] dark:text-[#A0AEC0] dark:hover:bg-slate-800/40 dark:hover:text-slate-200'
+                      ? 'bg-primary/10 text-primary shadow-sm'
+                      : 'text-text-secondary hover:bg-card-border/20 hover:text-text-primary'
                   }`}
                 >
                   <div className="flex items-center gap-3">
-                    <span className={`text-lg transition-colors ${isActive ? 'text-[#0891B2] dark:text-foam' : 'text-[#475569] dark:text-[#A0AEC0]'}`}>
+                    <span className={`text-lg transition-transform group-hover:scale-110 ${isActive ? 'text-primary' : 'text-text-muted group-hover:text-text-primary'}`}>
                       {item.icon}
                     </span>
                     <span>{item.name}</span>
                   </div>
                   {item.badge ? (
-                    <span className="rounded-full bg-aqua px-2 py-0.5 text-xs text-white font-extrabold shadow-sm">
+                    <span className="rounded-full bg-primary px-2 py-0.5 text-xs text-white font-extrabold shadow-sm animate-pulse">
                       {item.badge}
                     </span>
                   ) : null}
@@ -143,138 +241,114 @@ export default function MainAppLayout({ children }: { children: React.ReactNode 
               );
             })}
           </nav>
-        </div>
 
-        {/* User Card info & Theme toggle */}
-        <div className="border-t border-card-border pt-4 space-y-4">
-          <button
-            onClick={toggleTheme}
-            className="flex w-full items-center justify-between rounded-xl px-4 py-2.5 text-xs font-bold uppercase tracking-wider text-[#475569] dark:text-slate-400 hover:bg-[#F1F5F9] dark:hover:bg-slate-800/40"
-          >
-            <span>Theme Mode</span>
-            <span className="text-[#0F172A] dark:text-white font-extrabold">{isDarkMode ? '🌙 Dark' : '☀️ Light'}</span>
-          </button>
-
-          <div className="flex items-center justify-between p-2 rounded-2xl border border-card-border bg-card-bg hover:bg-[#F8FAFC] dark:hover:bg-slate-900/40 transition-colors shadow-sm">
-            <Link href="/you" className="flex items-center gap-3 group">
-              <div className="h-10 w-10 rounded-full bg-gradient-to-tr from-ocean to-aqua flex items-center justify-center text-white font-bold overflow-hidden shadow-sm shrink-0">
-                {user.avatar_url ? (
-                  <img src={user.avatar_url} alt="Avatar" className="h-full w-full object-cover" />
-                ) : (
-                  user.username[0].toUpperCase()
-                )}
-              </div>
-              <div className="text-left leading-tight">
-                <p className="text-sm font-bold truncate w-24 text-[#0F172A] dark:text-white group-hover:underline">
-                  {user.full_name || user.username}
-                </p>
-                <p className="text-xs text-[#64748B] dark:text-slate-450 truncate w-24">@{user.username}</p>
-              </div>
-            </Link>
-            <button
-              onClick={logout}
-              className="p-2 text-[#475569] hover:text-red-500 transition-colors"
-              title="Logout"
-            >
-              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-              </svg>
-            </button>
-          </div>
-        </div>
-      </aside>
-
-      {/* Main Central Content Area */}
-      <main className="flex-1 border-r border-slate-200/50 dark:border-slate-850 max-w-4xl min-h-screen">
-        {children}
-      </main>
-
-      {/* Right Sidebar - Rising Waves & Suggested Riders */}
-      <aside className="sticky top-0 h-screen w-80 p-6 hidden lg:block overflow-y-auto space-y-6">
-        {/* Suggested Riders */}
-        <div className="rounded-3xl border border-card-border bg-card-bg p-5 shadow-[0_2px_8px_rgba(0,0,0,0.02)]">
-          <h3 className="text-sm font-bold uppercase tracking-wider text-text-secondary mb-4">
-            Suggested Riders
-          </h3>
-          <div className="space-y-4">
-            {suggestedRiders.map((rider) => (
-              <div key={rider.username} className="flex items-center justify-between">
-                <Link href={`/you/${rider.username}`} className="flex items-center gap-3 group cursor-pointer">
-                  <div className="h-8 w-8 rounded-full bg-gradient-to-br from-aqua to-ocean flex items-center justify-center text-white text-xs font-bold overflow-hidden">
-                    {rider.avatar_url ? (
-                      <img src={rider.avatar_url} alt="Avatar" className="h-full w-full object-cover" />
-                    ) : (
-                      rider.username[0].toUpperCase()
-                    )}
-                  </div>
-                  <div>
-                    <h4 className="text-xs font-bold leading-none group-hover:underline text-text-primary">{rider.full_name || rider.username}</h4>
-                    <span className="text-[10px] text-text-secondary">@{rider.username}</span>
-                  </div>
-                </Link>
-                <button
-                  onClick={() => handleFollowRider(rider.id)}
-                  className="rounded-full bg-aqua/10 px-3 py-1 text-xs font-bold text-aqua hover:bg-aqua hover:text-white transition-all"
-                >
-                  Ride
-                </button>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Rising Waves */}
-        <div className="rounded-3xl border border-card-border bg-card-bg p-5 shadow-[0_2px_8px_rgba(0,0,0,0.02)]">
-          <h3 className="text-sm font-bold uppercase tracking-wider text-text-secondary mb-4">
-            🌊 Rising Waves
-          </h3>
-          <div className="space-y-4">
-            {risingWaves.map((wave) => (
-              <div
-                key={wave.id}
-                className="cursor-pointer space-y-1 hover:opacity-80 transition-opacity"
-                onClick={() => router.push(`/ocean`)}
-              >
-                <p className="text-xs text-text-secondary font-semibold">@{wave.creator.username}</p>
-                <p className="text-xs line-clamp-2 text-text-primary">{wave.content}</p>
-                <div className="flex gap-4 text-[10px] text-text-secondary">
-                  <span>💙 {wave.ripples_count} Ripples</span>
-                  <span>💬 {wave.joins_count} Joins</span>
+          {/* User footer profile details */}
+          <div className="border-t border-card-border pt-4">
+            <div className="p-3 rounded-xl bg-surface/30 border border-card-border flex items-center justify-between shadow-sm">
+              <div className="flex items-center gap-3 overflow-hidden">
+                <div className="h-8 w-8 rounded-full bg-gradient-to-tr from-secondary to-primary flex items-center justify-center text-white text-xs font-bold overflow-hidden shrink-0 shadow-inner">
+                  {user.avatar_url ? (
+                    <img src={user.avatar_url} alt="Avatar" className="h-full w-full object-cover" loading="lazy" />
+                  ) : (
+                    user.username[0].toUpperCase()
+                  )}
+                </div>
+                <div className="text-left leading-tight truncate">
+                  <p className="text-xs font-bold truncate text-text-primary">
+                    {user.full_name || user.username}
+                  </p>
+                  <p className="text-[10px] text-text-muted truncate">@{user.username}</p>
                 </div>
               </div>
-            ))}
-            {risingWaves.length === 0 && (
-              <p className="text-xs text-text-secondary">The ocean is calm right now.</p>
-            )}
+              <button
+                onClick={logout}
+                className="p-1.5 rounded-lg hover:bg-danger/10 text-text-secondary hover:text-danger transition-colors shrink-0"
+                title="Logout"
+              >
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M17 16l4-4m0 0l-4-4m4 4H7" />
+                </svg>
+              </button>
+            </div>
           </div>
-        </div>
-      </aside>
+        </aside>
 
-      {/* Mobile Bottom Navigation Bar */}
-      <nav className="fixed bottom-0 left-0 right-0 z-30 flex items-center justify-around border-t border-slate-200/50 bg-white/80 py-2 backdrop-blur-lg dark:border-slate-850 dark:bg-slate-900/80 md:hidden">
-        {navItems.slice(0, 4).map((item) => {
-          const isActive = pathname.startsWith(item.path);
-          return (
-            <Link key={item.name} href={item.path} className="flex flex-col items-center p-2 relative">
-              <span className="text-xl">{item.icon}</span>
-              <span className={`text-[10px] ${isActive ? 'text-aqua font-bold' : 'text-slate-400'}`}>
-                {item.name.split(' ')[0]}
-              </span>
-              {item.badge ? (
-                <span className="absolute top-1 right-2 rounded-full bg-aqua px-1.5 py-0.5 text-[8px] text-white font-bold">
-                  {item.badge}
-                </span>
-              ) : null}
-            </Link>
-          );
-        })}
-        <Link href="/you" className="flex flex-col items-center p-2">
-          <div className="h-5 w-5 rounded-full bg-slate-300 dark:bg-slate-600 flex items-center justify-center text-[10px] font-bold text-white">
-            {user.username[0].toUpperCase()}
+        {/* Center Main Stream Feed */}
+        <main className="flex-1 min-h-[calc(100vh-64px)] border-x border-card-border py-6 max-w-2xl px-4 sm:px-6">
+          {children}
+        </main>
+
+        {/* Right Sidebar - Analytics & Discover tools */}
+        <aside className="hidden lg:block w-80 shrink-0 py-6 space-y-6 sticky top-16 h-[calc(100vh-64px)] overflow-y-auto pr-1">
+          {/* Announcements Section */}
+          <div className="rounded-card border border-card-border bg-surface/30 p-5 shadow-sm space-y-2">
+            <h4 className="text-xs font-bold uppercase tracking-wider text-text-secondary flex items-center gap-1.5">
+              <span>📢</span> Announcements
+            </h4>
+            <div className="p-3.5 rounded-xl bg-primary/5 border border-primary/10 text-xs text-text-secondary font-medium leading-relaxed">
+              Welcome to the redesigned Tarang! Enjoy responsiveness across all desktop, tablet, and mobile views.
+            </div>
           </div>
-          <span className="text-[10px] text-slate-400">You</span>
-        </Link>
-      </nav>
+
+          {/* Who to Follow - Suggested Riders */}
+          <div className="rounded-card border border-card-border bg-card-bg p-5 shadow-sm space-y-4">
+            <h4 className="text-xs font-bold uppercase tracking-wider text-text-secondary flex items-center gap-1.5">
+              <span>👥</span> Who to Follow
+            </h4>
+            <div className="space-y-3.5">
+              {suggestedRiders.map((rider) => (
+                <div key={rider.username} className="flex items-center justify-between gap-2">
+                  <Link href={`/you/${rider.username}`} prefetch={true} className="flex items-center gap-2.5 group cursor-pointer truncate">
+                    <div className="h-8 w-8 rounded-full bg-gradient-to-br from-secondary to-primary flex items-center justify-center text-white text-xs font-bold overflow-hidden shrink-0">
+                      {rider.avatar_url ? (
+                        <img src={rider.avatar_url} alt="Avatar" className="h-full w-full object-cover" loading="lazy" />
+                      ) : (
+                        rider.username[0].toUpperCase()
+                      )}
+                    </div>
+                    <div className="truncate">
+                      <h4 className="text-xs font-bold leading-none group-hover:underline text-text-primary truncate">{rider.full_name || rider.username}</h4>
+                      <span className="text-[10px] text-text-muted">@{rider.username}</span>
+                    </div>
+                  </Link>
+                  <button
+                    onClick={() => handleFollowRider(rider.id)}
+                    className="rounded-full bg-primary/10 px-3.5 py-1 text-[10px] font-bold text-primary hover:bg-primary hover:text-white transition-all active:scale-95 shrink-0"
+                  >
+                    Ride
+                  </button>
+                </div>
+              ))}
+              {suggestedRiders.length === 0 && (
+                <p className="text-xs text-text-muted font-bold select-none py-1">No additional suggestions.</p>
+              )}
+            </div>
+          </div>
+
+          {/* Recent Activity - Rising Waves */}
+          <div className="rounded-card border border-card-border bg-card-bg p-5 shadow-sm space-y-4">
+            <h4 className="text-xs font-bold uppercase tracking-wider text-text-secondary flex items-center gap-1.5">
+              <span>🌊</span> Recent Activity
+            </h4>
+            <div className="space-y-3.5">
+              {risingWaves.map((wave) => (
+                <div key={wave.id} className="space-y-1.5 border-b border-card-border/40 pb-3 last:border-none last:pb-0">
+                  <p className="text-xs text-text-secondary line-clamp-2 leading-relaxed font-medium">
+                    {wave.content}
+                  </p>
+                  <div className="flex justify-between items-center text-[9px] text-text-muted font-bold">
+                    <span>@{wave.creator?.username || 'user'}</span>
+                    <span>💙 {wave.ripples_count}</span>
+                  </div>
+                </div>
+              ))}
+              {risingWaves.length === 0 && (
+                <p className="text-xs text-text-muted font-bold select-none py-1">No recent waves.</p>
+              )}
+            </div>
+          </div>
+        </aside>
+      </div>
     </div>
   );
 }

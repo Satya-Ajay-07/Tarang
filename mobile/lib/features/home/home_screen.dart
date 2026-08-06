@@ -43,9 +43,59 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     }
   }
 
+  Widget _buildStreamTabButton(String label, String value, String currentValue) {
+    final isSelected = currentValue == value;
+    return GestureDetector(
+      onTap: () => ref.read(feedProvider.notifier).setStreamType(value),
+      child: Container(
+        padding: const EdgeInsets.only(bottom: 8),
+        decoration: BoxDecoration(
+          border: Border(
+            bottom: BorderSide(
+              color: isSelected ? AppTheme.primaryTeal : Colors.transparent,
+              width: 2,
+            ),
+          ),
+        ),
+        child: Text(
+          label.toUpperCase(),
+          style: TextStyle(
+            fontSize: 11,
+            fontWeight: FontWeight.w900,
+            letterSpacing: 1.1,
+            color: isSelected ? AppTheme.primaryTeal : Colors.grey,
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildHomeFeed() {
     final feedState = ref.watch(feedProvider);
 
+    return Column(
+      children: [
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: AppTheme.spaceM, vertical: 12),
+          decoration: BoxDecoration(
+            border: Border(bottom: BorderSide(color: Colors.grey.withValues(alpha: 0.1))),
+          ),
+          child: Row(
+            children: [
+              _buildStreamTabButton('Wave Stream', 'all', feedState.streamType),
+              const SizedBox(width: 24),
+              _buildStreamTabButton('Riding Currents', 'riding', feedState.streamType),
+            ],
+          ),
+        ),
+        Expanded(
+          child: _buildFeedList(feedState),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildFeedList(FeedState feedState) {
     if (feedState.status == FeedStatus.loading && feedState.waves.isEmpty) {
       // Skeleton loader shimmer list
       return ListView.builder(
