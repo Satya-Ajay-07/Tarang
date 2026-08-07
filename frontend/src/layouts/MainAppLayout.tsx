@@ -135,9 +135,6 @@ export default function MainAppLayout({ children }: { children: React.ReactNode 
           {/* Logo */}
           <div className="flex items-center gap-3 cursor-pointer" onClick={() => router.push('/ocean')}>
             <Logo size="sm" />
-            <span className="hidden sm:inline font-display font-black text-lg bg-gradient-to-r from-secondary to-primary bg-clip-text text-transparent select-none">
-              Tarang
-            </span>
           </div>
 
           {/* Search Box */}
@@ -192,7 +189,7 @@ export default function MainAppLayout({ children }: { children: React.ReactNode 
                   user.username[0].toUpperCase()
                 )}
               </Link>
-              
+
               <button
                 onClick={logout}
                 className="p-1 text-text-secondary hover:text-danger transition-colors hidden sm:block"
@@ -220,11 +217,10 @@ export default function MainAppLayout({ children }: { children: React.ReactNode 
                   key={item.name}
                   href={item.path}
                   prefetch={true}
-                  className={`flex items-center justify-between rounded-xl px-4 py-2.5 text-sm font-bold transition-all duration-200 group ${
-                    isActive
+                  className={`flex items-center justify-between rounded-xl px-4 py-2.5 text-sm font-bold transition-all duration-200 group ${isActive
                       ? 'bg-primary/10 text-primary shadow-sm'
                       : 'text-text-secondary hover:bg-card-border/20 hover:text-text-primary'
-                  }`}
+                    }`}
                 >
                   <div className="flex items-center gap-3">
                     <span className={`text-lg transition-transform group-hover:scale-110 ${isActive ? 'text-primary' : 'text-text-muted group-hover:text-text-primary'}`}>
@@ -286,7 +282,7 @@ export default function MainAppLayout({ children }: { children: React.ReactNode 
               <span>📢</span> Announcements
             </h4>
             <div className="p-3.5 rounded-xl bg-primary/5 border border-primary/10 text-xs text-text-secondary font-medium leading-relaxed">
-              Welcome to the redesigned Tarang! Enjoy responsiveness across all desktop, tablet, and mobile views.
+              Welcome to the Tarang! Enjoy responsiveness across all desktop, tablet, and mobile views.
             </div>
           </div>
 
