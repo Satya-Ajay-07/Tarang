@@ -9,7 +9,7 @@ import { Button, Modal, Card, Input } from '@/components/ui';
 type SettingsSection = 'profile' | 'account' | 'security' | 'privacy' | 'appearance' | 'notifications' | 'support' | 'about';
 
 export default function SettingsPage() {
-  const { user, logout } = useAuth();
+  const { user, logout, updateUser } = useAuth();
   const [activeSection, setActiveSection] = useState<SettingsSection>('profile');
   const [profileData, setProfileData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -51,6 +51,7 @@ export default function SettingsPage() {
   const [emailAlerts, setEmailAlerts] = useState(true);
   const [pushRipples, setPushRipples] = useState(true);
   const [pushJoins, setPushJoins] = useState(true);
+  const [allowLocationTags, setAllowLocationTags] = useState(true);
 
   // Load user profile details
   const fetchProfile = async () => {
@@ -71,6 +72,7 @@ export default function SettingsPage() {
         setGithubUrl(data.github_url || '');
         setAvatarPreview(data.avatar_url || null);
         setCoverPreview(data.cover_url || null);
+        setAllowLocationTags(data.allow_location_tags !== false);
       }
       
       // Load stored theme preference
@@ -542,6 +544,33 @@ export default function SettingsPage() {
                       onChange={(e) => {
                         setCircleOnlyComments(e.target.checked);
                         triggerToast("Interactions settings updated.");
+                      }}
+                      className="h-4 w-4 rounded border-card-border text-primary focus:ring-primary/40 shrink-0 mt-1"
+                    />
+                  </label>
+
+                  <label className="flex items-start justify-between gap-4 cursor-pointer pt-3 border-t border-card-border/40">
+                    <div className="max-w-[80%]">
+                      <h4 className="text-xs font-bold text-text-primary">Enable Location Tags</h4>
+                      <p className="text-[10px] text-text-muted font-bold leading-tight mt-0.5">Allow adding optional location tags (City, State, Country) to your Waves.</p>
+                    </div>
+                    <input
+                      type="checkbox"
+                      checked={allowLocationTags}
+                      onChange={async (e) => {
+                        const checked = e.target.checked;
+                        setAllowLocationTags(checked);
+                        try {
+                          await apiRequest('/users/me', {
+                            method: 'PUT',
+                            body: JSON.stringify({ allow_location_tags: checked }),
+                          });
+                          updateUser({ allow_location_tags: checked });
+                          triggerToast("Location tag settings updated.");
+                        } catch (err) {
+                          console.error(err);
+                          triggerToast("Failed to update location tag settings.", true);
+                        }
                       }}
                       className="h-4 w-4 rounded border-card-border text-primary focus:ring-primary/40 shrink-0 mt-1"
                     />

@@ -146,7 +146,10 @@ def enrich_waves_bulk(waves: List[Wave], db: Session, current_user: User, recurs
             bookmarked_by_me=wave.id in bookmarked_set,
             poll=poll_response,
             updated_at=wave.updated_at,
-            is_edited=is_edited
+            is_edited=is_edited,
+            city=wave.city,
+            state=wave.state,
+            country=wave.country
         ))
 
     return enriched_waves
@@ -206,7 +209,10 @@ def create_wave(
         media_type=wave_in.media_type,
         parent_wave_id=wave_in.parent_wave_id,
         circle_id=wave_in.circle_id,
-        spread_from_id=target_spread_from_id
+        spread_from_id=target_spread_from_id,
+        city=wave_in.city if current_user.allow_location_tags else None,
+        state=wave_in.state if current_user.allow_location_tags else None,
+        country=wave_in.country if current_user.allow_location_tags else None
     )
     db.add(new_wave)
     db.flush() # get new_wave.id before commit to link the poll
@@ -296,7 +302,19 @@ def create_wave(
             db.add(alert)
             db.commit()
 
+    # ── Achievement check ──────────────────────────────────────────────────────
+    # Run after all alerts so that the DB state is fresh for the checkers.
+    try:
+        from app.core.achievements import check_and_award_achievements
+        trigger = "wave_created"
+        newly = check_and_award_achievements(current_user, db, trigger=trigger)
+        if newly:
+            logger.info("Wave-created achievements unlocked for %s: %s", current_user.username, [a["id"] for a in newly])
+    except Exception as exc:
+        logger.warning("Achievement check error after wave_created: %s", exc)
+
     return enrich_wave(new_wave, db, current_user)
+
 
 # Ocean / Wave Stream (Home Feed)
 @router.get("", response_model=List[WaveResponse])
@@ -580,7 +598,22 @@ def toggle_ripple(
             )
             db.add(alert)
         db.commit()
+
+        # ── Achievement checks ────────────────────────────────────────────────
+        try:
+            from app.core.achievements import check_and_award_achievements
+            # Check for the person who gave the ripple
+            check_and_award_achievements(current_user, db, trigger="ripple_given")
+            # Check for the wave creator (ripple received)
+            if wave.creator_id != current_user.id:
+                wave_creator = db.query(User).filter(User.id == wave.creator_id).first()
+                if wave_creator:
+                    check_and_award_achievements(wave_creator, db, trigger="ripple_received")
+        except Exception as exc:
+            logger.warning("Achievement check error after ripple: %s", exc)
+
         return {"rippled": True, "ripples_count": db.query(Ripple).filter(Ripple.wave_id == wave_id).count()}
+
 
 # Spread Wave (Repost / Retweet)
 @router.post("/{wave_id}/spread")
@@ -757,3 +790,114 @@ def report_wave(
     logger.info("Wave report: user=%s wave=%s reason=%s", current_user.username, wave_id, reason)
     return {"message": "Wave reported successfully", "wave_id": wave_id, "reason": reason}
 
+
+# ── Trending Waves ─────────────────────────────────────────────────────────────
+import math as _math
+from datetime import timezone as _tz
+
+@router.get("/trending", response_model=List[WaveResponse])
+def get_trending_waves(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+    limit: int = Query(10, ge=1, le=30),
+    category: Optional[str] = Query(None, description="Filter: trending_now | rising | popular_this_week"),
+):
+    """
+    Return waves sorted by a Hacker News-style trending score.
+    Score = (ripples*1.5 + spreads*1.2 + replies*0.8 + bookmarks*0.5) / (age_hours + 2)^1.8
+
+    Each wave in the response is enriched with a 'trending_category' annotation:
+      - trending_now      -> high score, posted < 12 h ago
+      - rising            -> moderate score, posted < 48 h ago
+      - popular_this_week -> all others in the last 7 days
+    """
+    from datetime import timedelta
+    now = datetime.now(_tz.utc)
+    window = now - timedelta(days=7)
+
+    # Fetch candidate root waves from last 7 days (no replies)
+    raw_waves = (
+        db.query(Wave)
+        .options(
+            joinedload(Wave.creator),
+            joinedload(Wave.poll),
+            selectinload(Wave.hashtags),
+        )
+        .filter(Wave.parent_wave_id == None, Wave.created_at >= window)  # noqa: E711
+        .order_by(Wave.created_at.desc())
+        .limit(100)
+        .all()
+    )
+
+    if not raw_waves:
+        return []
+
+    all_ids = [w.id for w in raw_waves]
+
+    # Batch counts
+    ripples_map = dict(
+        db.query(Ripple.wave_id, func.count(Ripple.user_id))
+        .filter(Ripple.wave_id.in_(all_ids))
+        .group_by(Ripple.wave_id)
+        .all()
+    )
+    joins_map = dict(
+        db.query(Wave.parent_wave_id, func.count(Wave.id))
+        .filter(Wave.parent_wave_id.in_(all_ids))
+        .group_by(Wave.parent_wave_id)
+        .all()
+    )
+    spreads_map = dict(
+        db.query(Wave.spread_from_id, func.count(Wave.id))
+        .filter(Wave.spread_from_id.in_(all_ids))
+        .group_by(Wave.spread_from_id)
+        .all()
+    )
+    bookmarks_map = dict(
+        db.query(Bookmark.wave_id, func.count(Bookmark.user_id))
+        .filter(Bookmark.wave_id.in_(all_ids))
+        .group_by(Bookmark.wave_id)
+        .all()
+    )
+
+    def _score(w: Wave) -> float:
+        r = ripples_map.get(w.id, 0) * 1.5
+        sp = spreads_map.get(w.id, 0) * 1.2
+        j = joins_map.get(w.id, 0) * 0.8
+        bk = bookmarks_map.get(w.id, 0) * 0.5
+        created = w.created_at
+        if created.tzinfo is None:
+            created = created.replace(tzinfo=_tz.utc)
+        age_h = max((now - created).total_seconds() / 3600, 0.5)
+        return (r + sp + j + bk) / _math.pow(age_h + 2, 1.8)
+
+    def _category(w: Wave, score: float) -> str:
+        created = w.created_at
+        if created.tzinfo is None:
+            created = created.replace(tzinfo=_tz.utc)
+        age_h = (now - created).total_seconds() / 3600
+        if age_h < 12 and score > 1.0:
+            return "trending_now"
+        elif age_h < 48 and score > 0.3:
+            return "rising"
+        return "popular_this_week"
+
+    # Score and sort
+    scored = sorted(raw_waves, key=_score, reverse=True)
+
+    # Apply category filter
+    if category:
+        scored = [w for w in scored if _category(w, _score(w)) == category]
+
+    top = scored[:limit]
+
+    # Enrich and annotate
+    enriched = enrich_waves_bulk(top, db, current_user)
+
+    # Attach category as extra metadata via dict mutation on the pydantic model
+    for wave_resp, wave_obj in zip(enriched, top):
+        sc = _score(wave_obj)
+        wave_resp.__dict__["trending_category"] = _category(wave_obj, sc)
+        wave_resp.__dict__["trending_score"] = round(sc, 4)
+
+    return enriched

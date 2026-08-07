@@ -132,3 +132,35 @@ def get_conversations(
     # Sort conversations by last message timestamp
     conversations.sort(key=lambda x: x["last_message_time"], reverse=True)
     return conversations
+
+
+# Mark all messages from a partner as read
+from datetime import datetime
+
+@router.post("/{sender_id}/read")
+def mark_messages_as_read(
+    sender_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
+):
+    db.query(Message).filter(
+        Message.sender_id == sender_id,
+        Message.recipient_id == current_user.id,
+        Message.is_read == False
+    ).update({Message.is_read: True, Message.read_at: datetime.utcnow()})
+    db.commit()
+    
+    # Optional: notify sender via websocket that messages were read
+    # We can broadcast a "read" status event through the manager
+    try:
+        payload = {
+            "type": "read_receipt",
+            "reader_id": current_user.id,
+            "sender_id": sender_id
+        }
+        import asyncio
+        asyncio.create_task(manager.send_personal_message(payload, sender_id))
+    except Exception:
+        pass
+        
+    return {"status": "success"}

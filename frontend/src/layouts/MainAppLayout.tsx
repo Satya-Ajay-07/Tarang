@@ -6,6 +6,7 @@ import { Logo } from '@/components/ui/Logo';
 import { apiRequest } from '@/services/api';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
+import { TrendingWidget } from '@/components/trending/TrendingWidget';
 
 // Module-level caching for sidebar requests to eliminate duplicate/redundant fetches on page navigations
 let lastFetchedTime = 0;
@@ -117,6 +118,7 @@ export default function MainAppLayout({ children }: { children: React.ReactNode 
   const navItems = [
     { name: 'Ocean', path: '/ocean', icon: '🌊' },
     { name: 'Discover', path: '/discover', icon: '🔍' },
+    { name: 'Trending', path: '/trending', icon: '🔥' },
     { name: 'Wave Alerts', path: '/alerts', icon: '🔔', badge: unreadAlerts },
     { name: 'Messages', path: '/messages', icon: '💬' },
     { name: 'Wave Circles', path: '/circles', icon: '🎯' },
@@ -321,28 +323,8 @@ export default function MainAppLayout({ children }: { children: React.ReactNode 
             </div>
           </div>
 
-          {/* Recent Activity - Rising Waves */}
-          <div className="rounded-card border border-card-border bg-card-bg p-5 shadow-sm space-y-4">
-            <h4 className="text-xs font-bold uppercase tracking-wider text-text-secondary flex items-center gap-1.5">
-              <span>🌊</span> Recent Activity
-            </h4>
-            <div className="space-y-3.5">
-              {risingWaves.map((wave) => (
-                <div key={wave.id} className="space-y-1.5 border-b border-card-border/40 pb-3 last:border-none last:pb-0">
-                  <p className="text-xs text-text-secondary line-clamp-2 leading-relaxed font-medium">
-                    {wave.content}
-                  </p>
-                  <div className="flex justify-between items-center text-[9px] text-text-muted font-bold">
-                    <span>@{wave.creator?.username || 'user'}</span>
-                    <span>💙 {wave.ripples_count}</span>
-                  </div>
-                </div>
-              ))}
-              {risingWaves.length === 0 && (
-                <p className="text-xs text-text-muted font-bold select-none py-1">No recent waves.</p>
-              )}
-            </div>
-          </div>
+          {/* Trending Topics Widget */}
+          <TrendingWidget />
         </aside>
       </div>
     </div>

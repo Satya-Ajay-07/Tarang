@@ -39,6 +39,7 @@ class UserUpdate(BaseModel):
     twitter_url: Optional[str] = None
     github_url: Optional[str] = None
     pinned_wave_id: Optional[str] = None
+    allow_location_tags: Optional[bool] = None
 
 class ChangePasswordRequest(BaseModel):
     current_password: str
@@ -60,6 +61,7 @@ class UserResponse(UserBase):
     twitter_url: Optional[str] = None
     github_url: Optional[str] = None
     pinned_wave_id: Optional[str] = None
+    allow_location_tags: bool = True
 
     class Config:
         from_attributes = True
@@ -134,6 +136,9 @@ class WaveCreate(WaveBase):
     circle_id: Optional[str] = None
     poll: Optional[PollCreate] = None
     spread_from_id: Optional[str] = None
+    city: Optional[str] = None
+    state: Optional[str] = None
+    country: Optional[str] = None
 
 class WaveUpdate(BaseModel):
     content: Optional[str] = None
@@ -161,6 +166,9 @@ class WaveResponse(WaveBase):
     poll: Optional[PollResponse] = None
     updated_at: Optional[datetime] = None
     is_edited: bool = False
+    city: Optional[str] = None
+    state: Optional[str] = None
+    country: Optional[str] = None
 
     class Config:
         from_attributes = True

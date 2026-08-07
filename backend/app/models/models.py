@@ -34,12 +34,14 @@ class User(Base):
     deactivated_at = Column(DateTime, nullable=True)
     is_deleted = Column(Boolean, default=False, nullable=False)      # Permanent deletion
     deleted_at = Column(DateTime, nullable=True)
+    allow_location_tags = Column(Boolean, default=True, nullable=False)
 
     # Relationships
     waves = relationship("Wave", back_populates="creator", foreign_keys="Wave.creator_id")
     ripples = relationship("Ripple", back_populates="user")
     alerts_received = relationship("WaveAlert", back_populates="recipient", foreign_keys="WaveAlert.recipient_id")
     alerts_sent = relationship("WaveAlert", back_populates="sender", foreign_keys="WaveAlert.sender_id")
+    achievements = relationship("UserAchievement", back_populates="user", cascade="all, delete-orphan")
 
 class Wave(Base):
     __tablename__ = "waves"
@@ -50,6 +52,9 @@ class Wave(Base):
     content = Column(Text, nullable=True)
     media_url = Column(String(512), nullable=True)
     media_type = Column(String(50), nullable=True)  # "image", "video"
+    city = Column(String(100), nullable=True)
+    state = Column(String(100), nullable=True)
+    country = Column(String(100), nullable=True)
     created_at = Column(
     DateTime(timezone=True),
     default=lambda: datetime.now(timezone.utc),
@@ -267,3 +272,24 @@ class WaveHashtag(Base):
 
     wave_id = Column(String(36), ForeignKey("waves.id", ondelete="CASCADE"), primary_key=True)
     hashtag_id = Column(String(36), ForeignKey("hashtags.id", ondelete="CASCADE"), primary_key=True)
+
+
+class UserAchievement(Base):
+    """Tracks which achievements each user has unlocked."""
+    __tablename__ = "user_achievements"
+
+    id = Column(String(36), primary_key=True, default=generate_uuid)
+    user_id = Column(String(36), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    achievement_id = Column(String(100), nullable=False)  # e.g. "first_wave", "100_ripples"
+    unlocked_at = Column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(timezone.utc),
+        index=True,
+    )
+
+    user = relationship("User", back_populates="achievements")
+
+    __table_args__ = (
+        UniqueConstraint("user_id", "achievement_id", name="_user_achievement_uc"),
+    )
+

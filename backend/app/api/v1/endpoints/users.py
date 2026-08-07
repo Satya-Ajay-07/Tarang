@@ -2,12 +2,15 @@ from fastapi import APIRouter, Depends, status
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from typing import List, Optional
+import logging
 from app.api.deps import get_current_active_user
 from app.core.database import get_db
 from app.core.exceptions import NotFoundException, BadRequestException
 from app.models.models import User, Wave, WaveRider, WaveAlert
 from app.schemas.schemas import UserResponse, UserUpdate, ChangePasswordRequest, DeactivateAccountRequest
 from app.services.users import delete_user
+
+logger = logging.getLogger("tarang")
 from app.core.redis import get_redis
 import redis
 
@@ -47,6 +50,8 @@ def update_profile(
     if user_update.pinned_wave_id is not None:
         # Pinned wave id can be set to empty string or null to unpin
         current_user.pinned_wave_id = None if user_update.pinned_wave_id == "" else user_update.pinned_wave_id
+    if user_update.allow_location_tags is not None:
+        current_user.allow_location_tags = user_update.allow_location_tags
         
     db.commit()
     db.refresh(current_user)
@@ -106,7 +111,8 @@ def get_profile(
         "riding_count": riding_count,
         "is_riding": is_riding,
         "mutual_riders": mutual_riders,
-        "mutual_count": len(mutual_riders)
+        "mutual_count": len(mutual_riders),
+        "allow_location_tags": getattr(user, "allow_location_tags", True)
     }
 
 # Follow/Unfollow (Riding Toggle)
@@ -147,6 +153,17 @@ def toggle_ride(
         )
         db.add(alert)
         db.commit()
+
+        # ── Achievement checks ────────────────────────────────────────────────
+        try:
+            from app.core.achievements import check_and_award_achievements
+            # Check for the person who followed (rode)
+            check_and_award_achievements(current_user, db, trigger="rider_followed")
+            # Check for the person being followed (gained a rider)
+            check_and_award_achievements(target_user, db, trigger="rider_gained")
+        except Exception as exc:
+            logger.warning("Achievement check error after ride toggle: %s", exc)
+
         return {"riding": True, "message": f"You are now riding with {target_user.username}"}
 
 # List followers (riders)

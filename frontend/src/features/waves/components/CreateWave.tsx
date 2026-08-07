@@ -27,6 +27,11 @@ export const CreateWave: React.FC<CreateWaveProps> = ({ onWaveCreated, circleId 
   const [suggestionIndex, setSuggestionIndex] = useState(0);
   const [mentionTriggerIndex, setMentionTriggerIndex] = useState(-1);
 
+  const [city, setCity] = useState('');
+  const [state, setState] = useState('');
+  const [country, setCountry] = useState('');
+  const [showLocationFields, setShowLocationFields] = useState(false);
+
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -91,6 +96,9 @@ export const CreateWave: React.FC<CreateWaveProps> = ({ onWaveCreated, circleId 
           media_url: mediaUrl || null,
           media_type: mediaUrl ? (mediaType || 'image') : null,
           circle_id: circleId || null,
+          city: city.trim() || null,
+          state: state.trim() || null,
+          country: country.trim() || null,
         })
       });
 
@@ -98,6 +106,10 @@ export const CreateWave: React.FC<CreateWaveProps> = ({ onWaveCreated, circleId 
         setContent('');
         setMediaUrl('');
         setMediaType('');
+        setCity('');
+        setState('');
+        setCountry('');
+        setShowLocationFields(false);
         if (fileInputRef.current) {
           fileInputRef.current.value = '';
         }
@@ -273,6 +285,33 @@ export const CreateWave: React.FC<CreateWaveProps> = ({ onWaveCreated, circleId 
           </div>
         )}
 
+        {/* Location Tags Input Fields */}
+        {showLocationFields && (
+          <div className="flex flex-col sm:flex-row gap-2 p-3 bg-background rounded-xl border border-card-border animate-in fade-in duration-200">
+            <input
+              type="text"
+              placeholder="City (e.g. Visakhapatnam)"
+              value={city}
+              onChange={(e) => setCity(e.target.value)}
+              className="flex-1 px-3 py-1.5 text-xs rounded-lg border border-card-border bg-card-bg outline-none text-text-primary placeholder-text-muted"
+            />
+            <input
+              type="text"
+              placeholder="State (e.g. Andhra Pradesh)"
+              value={state}
+              onChange={(e) => setState(e.target.value)}
+              className="flex-1 px-3 py-1.5 text-xs rounded-lg border border-card-border bg-card-bg outline-none text-text-primary placeholder-text-muted"
+            />
+            <input
+              type="text"
+              placeholder="Country (e.g. India)"
+              value={country}
+              onChange={(e) => setCountry(e.target.value)}
+              className="flex-1 px-3 py-1.5 text-xs rounded-lg border border-card-border bg-card-bg outline-none text-text-primary placeholder-text-muted"
+            />
+          </div>
+        )}
+
         {/* Hidden File Input */}
         <input
           type="file"
@@ -294,6 +333,17 @@ export const CreateWave: React.FC<CreateWaveProps> = ({ onWaveCreated, circleId 
             >
               🖼️
             </button>
+            {user.allow_location_tags && (
+              <button
+                type="button"
+                onClick={() => setShowLocationFields(!showLocationFields)}
+                className={`p-2 transition-colors text-lg rounded-lg ${showLocationFields ? 'text-primary bg-primary/10' : 'text-text-secondary hover:text-primary'}`}
+                title="Add location tag"
+                disabled={loading}
+              >
+                📍
+              </button>
+            )}
             <span className="self-center text-xs text-text-muted font-bold">
               {content.length}/280
             </span>

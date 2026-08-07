@@ -482,6 +482,18 @@ const WaveCardComponent: React.FC<WaveCardProps> = ({ wave, onRefresh }) => {
               <h4 className="text-sm font-black leading-none group-hover:underline text-text-primary font-display">{activeWaveData.creator.full_name || activeWaveData.creator.username}</h4>
               <span className="text-xs text-text-secondary font-medium">@{activeWaveData.creator.username}</span>
             </div>
+            {(activeWaveData.city || activeWaveData.state || activeWaveData.country) && (
+              <div className="text-[10px] text-text-muted font-bold flex items-center gap-1 mt-0.5 select-none">
+                <span>📍</span>
+                <span>
+                  {[
+                    activeWaveData.city,
+                    activeWaveData.state,
+                    activeWaveData.country
+                  ].filter(Boolean).join(', ')}
+                </span>
+              </div>
+            )}
             <div className="flex items-center gap-2 mt-1">
               <span className="text-[10px] text-text-muted font-semibold flex items-center gap-1.5 select-none">
                 {timeAgo}

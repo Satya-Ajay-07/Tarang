@@ -8,6 +8,7 @@ import { apiRequest } from '@/services/api';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Button, Modal } from '@/components/ui';
+import { AchievementsSection } from '@/components/achievements/AchievementsSection';
 
 export default function UserProfilePage() {
   const { user: currentUser } = useAuth();
@@ -22,7 +23,7 @@ export default function UserProfilePage() {
   const [ridingCount, setRidingCount] = useState(0);
   const [ridersCount, setRidersCount] = useState(0);
   const [ridingLoading, setRidingLoading] = useState(false);
-  const [activeTab, setActiveTab] = useState<'Waves' | 'Replies' | 'Media' | 'Activity'>('Waves');
+  const [activeTab, setActiveTab] = useState<'Waves' | 'Replies' | 'Media' | 'Activity' | 'Achievements'>('Waves');
 
   // Follow Dialog states
   const [showFollowModal, setShowFollowModal] = useState(false);
@@ -217,23 +218,26 @@ export default function UserProfilePage() {
         </div>
 
         {/* Profile Tabs Navigation bar */}
-        <div className="mt-6 border-b border-card-border px-6 flex gap-4 text-xs font-black uppercase tracking-wider text-text-secondary select-none">
-          {(['Waves', 'Replies', 'Media', 'Activity'] as const).map((tab) => (
+        <div className="mt-6 border-b border-card-border px-6 flex gap-4 text-xs font-black uppercase tracking-wider text-text-secondary select-none overflow-x-auto scrollbar-none">
+          {(['Waves', 'Replies', 'Media', 'Activity', 'Achievements'] as const).map((tab) => (
             <button
               key={tab}
-              onClick={() => setActiveTab(tab)}
-              className={`pb-2.5 border-b-2 transition-all duration-200 ${
+              onClick={() => setActiveTab(tab as any)}
+              className={`pb-2.5 border-b-2 transition-all duration-200 whitespace-nowrap ${
                 activeTab === tab
                   ? 'border-primary text-primary'
                   : 'border-transparent hover:text-text-primary'
               }`}
             >
-              {tab}
+              {tab === 'Achievements' ? '🏆 ' + tab : tab}
             </button>
           ))}
         </div>
 
-        {/* User waves stream listing */}
+        {/* Achievements Tab */}
+        {(activeTab as string) === 'Achievements' ? (
+          <AchievementsSection username={username} />
+        ) : (
         <div className="p-6 space-y-4">
           {activeList.length === 0 ? (
             <div className="text-center py-16 space-y-3.5 border border-dashed border-card-border rounded-card bg-card-bg/10 select-none">
@@ -276,6 +280,7 @@ export default function UserProfilePage() {
             </div>
           )}
         </div>
+        )}
 
         {/* Follow modal lists */}
         {showFollowModal && (

@@ -13,6 +13,7 @@ export interface User {
   pinned_wave_id?: string;
   created_at: string;
   role: string;
+  allow_location_tags?: boolean;
 }
 
 export interface Token {
