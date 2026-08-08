@@ -9,6 +9,8 @@ import 'package:mobile/features/settings/delete_account_screen.dart';
 import 'package:mobile/features/settings/support_screen.dart';
 import 'package:mobile/features/settings/about_screen.dart';
 import 'package:mobile/features/settings/providers/settings_provider.dart';
+import 'package:mobile/core/models/user_model.dart';
+import 'package:mobile/core/providers/core_providers.dart';
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -231,6 +233,33 @@ class SettingsScreen extends ConsumerWidget {
               title: const Text('Clear Cache'),
               onTap: () => _showClearCacheConfirmation(context, ref),
             ),
+            if (user != null)
+              SwitchListTile(
+                secondary: const Icon(Icons.location_on_outlined),
+                title: const Text('Enable Location Tags'),
+                subtitle: const Text('Allow adding City, State, Country to Waves'),
+                activeThumbColor: AppTheme.primaryTeal,
+                value: user.allowLocationTags,
+                onChanged: (val) async {
+                  try {
+                    final response = await ref.read(apiClientProvider).dio.put(
+                      '/users/me',
+                      data: {'allow_location_tags': val},
+                    );
+                    if (response.statusCode == 200) {
+                      final updated = UserModel.fromJson(response.data as Map<String, dynamic>);
+                      ref.read(authProvider.notifier).updateUser(updated);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Location settings updated')),
+                      );
+                    }
+                  } catch (e) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('Failed to update settings: $e')),
+                    );
+                  }
+                },
+              ),
 
             const Divider(),
 

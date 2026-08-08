@@ -173,6 +173,8 @@ class SearchNotifier extends StateNotifier<SearchState> {
     state = state.copyWith(recentSearches: const []);
   }
 
+  int _searchVersion = 0;
+
   Future<void> search(String query, {String kind = 'all'}) async {
     if (query.trim().isEmpty) {
       state =
@@ -180,23 +182,37 @@ class SearchNotifier extends StateNotifier<SearchState> {
       return;
     }
 
+    _searchVersion++;
+    final version = _searchVersion;
+
     state = state.copyWith(isLoading: true, query: query, errorMessage: null);
 
     try {
       final searchResult = await _exploreRepo.search(query, kind: kind);
+      if (version != _searchVersion) return; // Stale query cancellation check
 
-      // Concurrently fetch the full WaveModels for the simplified search wave results
-      // to supply creator avatar metadata required by the reusable WaveCard.
-      final wavesList = await Future.wait(
-        searchResult.waves.map((w) => _waveRepo.getWave(w.id)),
+      // Deduplicate concurrently fetched wave IDs to minimize server load
+      final uniqueWaveIds = searchResult.waves.map((w) => w.id).toSet().toList();
+
+      final fetchedWaves = await Future.wait(
+        uniqueWaveIds.map((id) => _waveRepo.getWave(id)),
       );
+      if (version != _searchVersion) return;
+
+      // Re-map to preserve original search result ordering
+      final wavesMap = {for (var w in fetchedWaves) w.id: w};
+      final orderedWaves = searchResult.waves
+          .map((w) => wavesMap[w.id])
+          .whereType<WaveModel>()
+          .toList();
 
       state = state.copyWith(
         isLoading: false,
         people: searchResult.people,
-        waves: wavesList,
+        waves: orderedWaves,
       );
     } catch (e) {
+      if (version != _searchVersion) return;
       state = state.copyWith(
         isLoading: false,
         errorMessage: e.toString(),

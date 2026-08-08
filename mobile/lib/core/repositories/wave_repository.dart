@@ -14,6 +14,9 @@ abstract class WaveRepository {
     String? circleId,
     String? spreadFromId,
     Map<String, dynamic>? poll,
+    String? city,
+    String? state,
+    String? country,
   });
   Future<WaveModel> updateWave(String waveId,
       {String? content, String? mediaUrl, String? mediaType});
@@ -70,6 +73,9 @@ class WaveRepositoryImpl implements WaveRepository {
     String? circleId,
     String? spreadFromId,
     Map<String, dynamic>? poll,
+    String? city,
+    String? state,
+    String? country,
   }) async {
     try {
       final response = await _apiClient.dio.post(
@@ -82,6 +88,9 @@ class WaveRepositoryImpl implements WaveRepository {
           if (circleId != null) 'circle_id': circleId,
           if (spreadFromId != null) 'spread_from_id': spreadFromId,
           if (poll != null) 'poll': poll,
+          if (city != null) 'city': city,
+          if (state != null) 'state': state,
+          if (country != null) 'country': country,
         },
       );
       return WaveModel.fromJson(response.data as Map<String, dynamic>);

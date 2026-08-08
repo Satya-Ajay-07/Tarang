@@ -18,6 +18,7 @@ class UserModel extends Equatable {
   final String? githubUrl;
   final String? pinnedWaveId;
   final bool isActive;
+  final bool allowLocationTags;
 
   const UserModel({
     required this.id,
@@ -37,6 +38,7 @@ class UserModel extends Equatable {
     this.githubUrl,
     this.pinnedWaveId,
     this.isActive = true,
+    this.allowLocationTags = true,
   });
 
   factory UserModel.fromJson(Map<String, dynamic> json) {
@@ -60,6 +62,7 @@ class UserModel extends Equatable {
       githubUrl: json['github_url'] as String?,
       pinnedWaveId: json['pinned_wave_id'] as String?,
       isActive: json['is_active'] as bool? ?? true,
+      allowLocationTags: json['allow_location_tags'] as bool? ?? true,
     );
   }
 
@@ -82,6 +85,7 @@ class UserModel extends Equatable {
       'github_url': githubUrl,
       'pinned_wave_id': pinnedWaveId,
       'is_active': isActive,
+      'allow_location_tags': allowLocationTags,
     };
   }
 
@@ -104,5 +108,6 @@ class UserModel extends Equatable {
         githubUrl,
         pinnedWaveId,
         isActive,
+        allowLocationTags,
       ];
 }

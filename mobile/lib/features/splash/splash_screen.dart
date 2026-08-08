@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mobile/core/shared/widgets/app_widgets.dart';
-import 'package:mobile/features/authentication/providers/auth_provider.dart';
+import 'package:mobile/core/theme/app_theme.dart';
 
 class SplashScreen extends ConsumerStatefulWidget {
   const SplashScreen({super.key});
@@ -12,24 +12,18 @@ class SplashScreen extends ConsumerStatefulWidget {
 
 class _SplashScreenState extends ConsumerState<SplashScreen> {
   @override
-  void initState() {
-    super.initState();
-    // Trigger auth state check
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      ref.read(authProvider.notifier).checkAuthentication();
-    });
-  }
-
-  @override
   Widget build(BuildContext context) {
-    return const Scaffold(
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return Scaffold(
+      backgroundColor: isDark ? AppTheme.darkBackground : AppTheme.lightBackground,
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            AppLogo(size: 100),
-            SizedBox(height: 24),
-            CircularProgressIndicator(),
+            const TarangLogo(size: 80.0, showText: false),
+            const SizedBox(height: 24),
+            const TarangLoading(size: 32.0),
           ],
         ),
       ),

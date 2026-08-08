@@ -18,6 +18,7 @@
         "flutter_svg",
         "freezed_annotation",
         "go_router",
+        "google_fonts",
         "image_picker",
         "internet_connection_checker_plus",
         "intl",
@@ -26,7 +27,8 @@
         "package_info_plus",
         "permission_handler",
         "share_plus",
-        "shimmer"
+        "shimmer",
+        "web_socket_channel"
       ],
       "devDependencies": [
         "build_runner",
@@ -133,6 +135,16 @@
         "stream_channel",
         "test_api",
         "vector_math"
+      ]
+    },
+    {
+      "name": "web_socket_channel",
+      "version": "2.4.3",
+      "dependencies": [
+        "async",
+        "crypto",
+        "stream_channel",
+        "web"
       ]
     },
     {
@@ -496,16 +508,6 @@
       ]
     },
     {
-      "name": "web_socket_channel",
-      "version": "2.4.3",
-      "dependencies": [
-        "async",
-        "crypto",
-        "stream_channel",
-        "web"
-      ]
-    },
-    {
       "name": "watcher",
       "version": "1.2.1",
       "dependencies": [
@@ -780,6 +782,11 @@
       ]
     },
     {
+      "name": "web",
+      "version": "0.4.2",
+      "dependencies": []
+    },
+    {
       "name": "win32",
       "version": "5.15.0",
       "dependencies": [
@@ -860,11 +867,6 @@
         "meta",
         "web"
       ]
-    },
-    {
-      "name": "web",
-      "version": "0.4.2",
-      "dependencies": []
     },
     {
       "name": "package_info_plus_platform_interface",
@@ -1636,6 +1638,16 @@
         "collection",
         "meta",
         "pub_semver"
+      ]
+    },
+    {
+      "name": "google_fonts",
+      "version": "6.3.3",
+      "dependencies": [
+        "crypto",
+        "flutter",
+        "http",
+        "path_provider"
       ]
     }
   ],

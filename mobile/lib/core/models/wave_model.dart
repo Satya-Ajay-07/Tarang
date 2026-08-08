@@ -24,6 +24,10 @@ class WaveModel extends Equatable {
   final DateTime? updatedAt;
   final bool isEdited;
 
+  final String? city;
+  final String? state;
+  final String? country;
+
   const WaveModel({
     required this.id,
     this.content,
@@ -45,6 +49,9 @@ class WaveModel extends Equatable {
     this.poll,
     this.updatedAt,
     required this.isEdited,
+    this.city,
+    this.state,
+    this.country,
   });
 
   factory WaveModel.fromJson(Map<String, dynamic> json) {
@@ -75,6 +82,9 @@ class WaveModel extends Equatable {
           ? DateTime.parse(json['updated_at'] as String)
           : null,
       isEdited: json['is_edited'] as bool? ?? false,
+      city: json['city'] as String?,
+      state: json['state'] as String?,
+      country: json['country'] as String?,
     );
   }
 
@@ -100,6 +110,9 @@ class WaveModel extends Equatable {
       'poll': poll?.toJson(),
       'updated_at': updatedAt?.toIso8601String(),
       'is_edited': isEdited,
+      'city': city,
+      'state': state,
+      'country': country,
     };
   }
 
@@ -117,6 +130,9 @@ class WaveModel extends Equatable {
     DateTime? updatedAt,
     bool? isEdited,
     WaveModel? spreadFrom,
+    String? city,
+    String? state,
+    String? country,
   }) {
     return WaveModel(
       id: id,
@@ -139,6 +155,9 @@ class WaveModel extends Equatable {
       poll: poll ?? this.poll,
       updatedAt: updatedAt ?? this.updatedAt,
       isEdited: isEdited ?? this.isEdited,
+      city: city ?? this.city,
+      state: state ?? this.state,
+      country: country ?? this.country,
     );
   }
 
@@ -164,5 +183,8 @@ class WaveModel extends Equatable {
         poll,
         updatedAt,
         isEdited,
+        city,
+        state,
+        country,
       ];
 }

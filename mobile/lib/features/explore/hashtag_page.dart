@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:mobile/core/shared/widgets/app_widgets.dart';
 import 'package:mobile/core/theme/app_theme.dart';
+import 'package:mobile/core/theme/app_text_styles.dart';
 import 'package:mobile/features/explore/providers/explore_providers.dart';
 import 'package:mobile/features/home/widgets/wave_card.dart';
 
@@ -16,116 +18,95 @@ class HashtagPage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(hashtagProvider(tag));
     final notifier = ref.read(hashtagProvider(tag).notifier);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final textThemeColor = isDark ? AppTheme.textPrimaryDark : AppTheme.textPrimaryLight;
+    final borderColor = isDark ? AppTheme.darkCardBorder : AppTheme.lightCardBorder;
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(tag),
+        title: Text('#$tag', style: AppTextStyles.h5.copyWith(color: textThemeColor, fontWeight: FontWeight.bold)),
+        shape: Border(bottom: BorderSide(color: borderColor)),
       ),
       body: SafeArea(
         child: Column(
           children: [
             // Header stats card
             Container(
-              padding: const EdgeInsets.all(AppTheme.spaceM),
-              color: Theme.of(context).colorScheme.surface,
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                border: Border(bottom: BorderSide(color: borderColor)),
+              ),
               child: Row(
                 children: [
                   Container(
                     width: 48,
                     height: 48,
                     decoration: BoxDecoration(
-                      color: AppTheme.primaryTeal.withValues(alpha: 0.1),
+                      color: (isDark ? AppTheme.primaryTealLight : AppTheme.primaryTeal).withValues(alpha: 0.1),
                       shape: BoxShape.circle,
                     ),
-                    child: const Center(
+                    child: Center(
                       child: Text(
                         '#',
-                        style: TextStyle(
-                          color: AppTheme.primaryTeal,
+                        style: AppTextStyles.h3.copyWith(
+                          color: isDark ? AppTheme.primaryTealLight : AppTheme.primaryTeal,
                           fontWeight: FontWeight.bold,
-                          fontSize: 24,
                         ),
                       ),
                     ),
                   ),
-                  const SizedBox(width: AppTheme.spaceM),
+                  const SizedBox(width: 16),
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        tag,
-                        style: const TextStyle(
-                            fontWeight: FontWeight.bold, fontSize: 18),
+                        '#$tag',
+                        style: AppTextStyles.h5.copyWith(color: textThemeColor, fontWeight: FontWeight.bold),
                       ),
                       const SizedBox(height: 2),
                       Text(
                         '${state.waves.length} waves rolling',
-                        style:
-                            const TextStyle(color: Colors.grey, fontSize: 13),
+                        style: AppTextStyles.caption.copyWith(color: AppTheme.textMuted),
                       ),
                     ],
                   ),
                 ],
               ),
             ),
-            const Divider(height: 1),
 
             // List of waves
             Expanded(
               child: state.isLoading && state.waves.isEmpty
-                  ? const Center(child: CircularProgressIndicator())
+                  ? const Center(child: TarangLoading())
                   : state.errorMessage != null && state.waves.isEmpty
-                      ? Center(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              const Icon(Icons.error_outline,
-                                  size: 48, color: Colors.red),
-                              const SizedBox(height: AppTheme.spaceM),
-                              Text(state.errorMessage!),
-                              const SizedBox(height: AppTheme.spaceM),
-                              ElevatedButton(
-                                onPressed: notifier.loadHashtagWaves,
-                                child: const Text('Retry'),
-                              ),
-                            ],
-                          ),
+                      ? TarangErrorState(
+                          message: state.errorMessage!,
+                          onRetry: notifier.loadHashtagWaves,
                         )
                       : state.waves.isEmpty
                           ? RefreshIndicator(
                               onRefresh: notifier.loadHashtagWaves,
-                              child: ListView(
+                              child: SingleChildScrollView(
                                 physics: const AlwaysScrollableScrollPhysics(),
-                                children: [
-                                  SizedBox(
-                                      height:
-                                          MediaQuery.of(context).size.height *
-                                              0.2),
-                                  const Icon(Icons.waves,
-                                      size: 64, color: Colors.grey),
-                                  const SizedBox(height: AppTheme.spaceM),
-                                  const Text(
-                                    'No Waves Yet',
-                                    textAlign: TextAlign.center,
-                                    style: TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 16),
+                                child: SizedBox(
+                                  height: MediaQuery.of(context).size.height * 0.6,
+                                  child: const TarangEmptyState(
+                                    title: 'No Waves Yet',
+                                    body: 'Nobody has posted with this hashtag yet.',
                                   ),
-                                  const SizedBox(height: AppTheme.spaceS),
-                                  const Text(
-                                    'Nobody has posted with this hashtag yet.',
-                                    textAlign: TextAlign.center,
-                                    style: TextStyle(color: Colors.grey),
-                                  ),
-                                ],
+                                ),
                               ),
                             )
                           : RefreshIndicator(
                               onRefresh: notifier.loadHashtagWaves,
                               child: ListView.builder(
+                                padding: const EdgeInsets.all(16),
                                 itemCount: state.waves.length,
-                                itemBuilder: (context, index) => WaveCard(
-                                  wave: state.waves[index],
+                                itemBuilder: (context, index) => Padding(
+                                  padding: const EdgeInsets.only(bottom: 12),
+                                  child: WaveCard(
+                                    wave: state.waves[index],
+                                  ),
                                 ),
                               ),
                             ),

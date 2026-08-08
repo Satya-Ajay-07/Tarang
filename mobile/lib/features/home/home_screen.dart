@@ -1,8 +1,10 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:mobile/core/shared/widgets/app_widgets.dart';
 import 'package:mobile/core/theme/app_theme.dart';
+import 'package:mobile/core/theme/app_text_styles.dart';
 import 'package:mobile/core/providers/theme_provider.dart';
 import 'package:mobile/features/authentication/providers/auth_provider.dart';
 import 'package:mobile/features/home/providers/feed_provider.dart';
@@ -45,25 +47,29 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
   Widget _buildStreamTabButton(String label, String value, String currentValue) {
     final isSelected = currentValue == value;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return GestureDetector(
       onTap: () => ref.read(feedProvider.notifier).setStreamType(value),
       child: Container(
-        padding: const EdgeInsets.only(bottom: 8),
+        padding: const EdgeInsets.symmetric(vertical: 12),
         decoration: BoxDecoration(
           border: Border(
             bottom: BorderSide(
-              color: isSelected ? AppTheme.primaryTeal : Colors.transparent,
+              color: isSelected
+                  ? (isDark ? AppTheme.primaryTealLight : AppTheme.primaryTeal)
+                  : Colors.transparent,
               width: 2,
             ),
           ),
         ),
         child: Text(
           label.toUpperCase(),
-          style: TextStyle(
-            fontSize: 11,
+          style: AppTextStyles.label.copyWith(
+            color: isSelected
+                ? (isDark ? AppTheme.primaryTealLight : AppTheme.primaryTeal)
+                : AppTheme.textMuted,
             fontWeight: FontWeight.w900,
-            letterSpacing: 1.1,
-            color: isSelected ? AppTheme.primaryTeal : Colors.grey,
           ),
         ),
       ),
@@ -72,13 +78,16 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
   Widget _buildHomeFeed() {
     final feedState = ref.watch(feedProvider);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final borderColor = isDark ? AppTheme.darkCardBorder : AppTheme.lightCardBorder;
 
     return Column(
       children: [
+        // Tab selector bar
         Container(
-          padding: const EdgeInsets.symmetric(horizontal: AppTheme.spaceM, vertical: 12),
+          padding: const EdgeInsets.symmetric(horizontal: 24),
           decoration: BoxDecoration(
-            border: Border(bottom: BorderSide(color: Colors.grey.withValues(alpha: 0.1))),
+            border: Border(bottom: BorderSide(color: borderColor)),
           ),
           child: Row(
             children: [
@@ -97,104 +106,70 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
   Widget _buildFeedList(FeedState feedState) {
     if (feedState.status == FeedStatus.loading && feedState.waves.isEmpty) {
-      // Skeleton loader shimmer list
       return ListView.builder(
-        itemCount: 6,
-        padding: const EdgeInsets.symmetric(vertical: AppTheme.spaceS),
-        itemBuilder: (context, index) => const Padding(
-          padding: EdgeInsets.symmetric(
-              horizontal: AppTheme.spaceM, vertical: AppTheme.spaceS),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  ShimmerLoader(width: 40, height: 40, borderRadius: 20),
-                  SizedBox(width: 8),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      ShimmerLoader(width: 120, height: 14),
-                      SizedBox(height: 4),
-                      ShimmerLoader(width: 80, height: 10),
-                    ],
-                  ),
-                ],
-              ),
-              SizedBox(height: 12),
-              ShimmerLoader(width: double.infinity, height: 16),
-              SizedBox(height: 6),
-              ShimmerLoader(width: 200, height: 16),
-              SizedBox(height: 16),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  ShimmerLoader(width: 40, height: 16),
-                  ShimmerLoader(width: 40, height: 16),
-                  ShimmerLoader(width: 40, height: 16),
-                  ShimmerLoader(width: 40, height: 16),
-                ],
-              ),
-            ],
+        itemCount: 4,
+        padding: const EdgeInsets.all(16),
+        itemBuilder: (context, index) => Padding(
+          padding: const EdgeInsets.only(bottom: 16),
+          child: TarangCard(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Row(
+                  children: [
+                    TarangSkeleton(variant: TarangSkeletonVariant.circle, width: 40, height: 40),
+                    SizedBox(width: 12),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        TarangSkeleton(variant: TarangSkeletonVariant.text, width: 120, height: 12),
+                        SizedBox(height: 6),
+                        TarangSkeleton(variant: TarangSkeletonVariant.text, width: 80, height: 10),
+                      ],
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                const TarangSkeleton(variant: TarangSkeletonVariant.text, width: double.infinity, height: 14),
+                const SizedBox(height: 8),
+                const TarangSkeleton(variant: TarangSkeletonVariant.text, width: 220, height: 14),
+                const SizedBox(height: 20),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: List.generate(4, (_) => const TarangSkeleton(variant: TarangSkeletonVariant.text, width: 44, height: 12)),
+                ),
+              ],
+            ),
           ),
         ),
       );
     }
 
     if (feedState.status == FeedStatus.error && feedState.waves.isEmpty) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(AppTheme.spaceM),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Icon(Icons.wifi_off_rounded, size: 64, color: Colors.grey),
-              const SizedBox(height: AppTheme.spaceM),
-              const Text(
-                'Failed to load feed',
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-              ),
-              const SizedBox(height: AppTheme.spaceS),
-              Text(
-                feedState.errorMessage ??
-                    'Please verify your internet connection.',
-                textAlign: TextAlign.center,
-                style: const TextStyle(color: Colors.grey),
-              ),
-              const SizedBox(height: AppTheme.spaceL),
-              ElevatedButton(
-                onPressed: () =>
-                    ref.read(feedProvider.notifier).loadFeed(refresh: true),
-                child: const Text('Try Again'),
-              ),
-            ],
-          ),
-        ),
+      return TarangErrorState(
+        message: feedState.errorMessage ?? 'Failed to load feed',
+        onRetry: () => ref.read(feedProvider.notifier).loadFeed(refresh: true),
       );
     }
 
     if (feedState.waves.isEmpty) {
       return RefreshIndicator(
-        onRefresh: () =>
-            ref.read(feedProvider.notifier).loadFeed(refresh: true),
-        child: ListView(
+        onRefresh: () => ref.read(feedProvider.notifier).loadFeed(refresh: true),
+        child: SingleChildScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
-          children: [
-            SizedBox(height: MediaQuery.of(context).size.height * 0.3),
-            const Icon(Icons.waves, size: 64, color: AppTheme.primaryTeal),
-            const SizedBox(height: AppTheme.spaceM),
-            const Text(
-              'Your ocean is quiet',
-              textAlign: TextAlign.center,
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+          child: SizedBox(
+            height: MediaQuery.of(context).size.height * 0.7,
+            child: TarangEmptyState(
+              title: 'Your ocean is quiet',
+              body: 'No waves are rolling right now. Be the first to create one!',
+              action: TarangButton(
+                text: 'Create a Wave',
+                variant: TarangButtonVariant.primary,
+                size: TarangButtonSize.sm,
+                onPressed: () => context.push('/compose'),
+              ),
             ),
-            const SizedBox(height: AppTheme.spaceS),
-            const Text(
-              'No waves are rolling right now. Be the first to create one!',
-              textAlign: TextAlign.center,
-              style: TextStyle(color: Colors.grey),
-            ),
-          ],
+          ),
         ),
       );
     }
@@ -205,17 +180,26 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         controller: _scrollController,
         itemCount: feedState.waves.length + 1,
         physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.symmetric(vertical: 16),
         itemBuilder: (context, index) {
           if (index == feedState.waves.length) {
             if (feedState.status == FeedStatus.loadingMore) {
               return const Padding(
-                padding: EdgeInsets.all(AppTheme.spaceM),
-                child: Center(child: CircularProgressIndicator()),
+                padding: EdgeInsets.symmetric(vertical: 24),
+                child: TarangLoading(size: 24.0),
               );
             }
-            return const SizedBox(height: 80); // Bottom list spacer
+            return const SizedBox(height: 80); // Spacer at bottom
           }
-          return WaveCard(wave: feedState.waves[index]);
+          return Consumer(
+            builder: (context, ref, child) {
+              final wave = ref.watch(feedProvider.select((state) => state.waves[index]));
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 12, left: 16, right: 16),
+                child: WaveCard(wave: wave),
+              );
+            },
+          );
         },
       ),
     );
@@ -226,114 +210,160 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final authState = ref.watch(authProvider);
     final user = authState.user;
     final themeMode = ref.watch(themeProvider);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final borderColor = isDark ? AppTheme.darkCardBorder : AppTheme.lightCardBorder;
+    final appBarBg = isDark
+        ? AppTheme.darkBackground.withValues(alpha: 0.8)
+        : AppTheme.lightBackground.withValues(alpha: 0.8);
 
     final tabs = [
       _buildHomeFeed(),
       const ExploreScreen(),
-      const SizedBox
-          .shrink(), // Compose placeholder (never rendered, opens compose screen)
+      const SizedBox.shrink(), // Compose router intercept
       const NotificationScreen(),
       user == null
-          ? const Center(child: CircularProgressIndicator())
+          ? const Center(child: TarangLoading())
           : ProfileScreen(username: user.username),
     ];
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Tarang 🌊'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.bookmark_outline),
-            onPressed: () {
-              Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (context) => const BookmarksScreen(),
+      // Glassmorphic App Bar
+      extendBodyBehindAppBar: true,
+      appBar: PreferredSize(
+        preferredSize: const Size.fromHeight(64.0),
+        child: ClipRRect(
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+            child: AppBar(
+              backgroundColor: appBarBg,
+              elevation: 0,
+              scrolledUnderElevation: 0,
+              automaticallyImplyLeading: false,
+              titleSpacing: 16,
+              shape: Border(bottom: BorderSide(color: borderColor)),
+              title: const TarangLogo(size: 32.0),
+              actions: [
+                TarangIconButton(
+                  icon: const Icon(Icons.mail_outline_rounded),
+                  size: 36,
+                  hasBorder: false,
+                  tooltip: 'Messages',
+                  onPressed: () => context.push('/messages'),
                 ),
-              );
-            },
-          ),
-          IconButton(
-            icon: Icon(
-              themeMode == ThemeMode.dark ? Icons.light_mode : Icons.dark_mode,
+                TarangIconButton(
+                  icon: const Icon(Icons.bookmark_outline_rounded),
+                  size: 36,
+                  hasBorder: false,
+                  tooltip: 'Saved',
+                  onPressed: () => Navigator.of(context).push(
+                    MaterialPageRoute(builder: (context) => const BookmarksScreen()),
+                  ),
+                ),
+                TarangIconButton(
+                  icon: Icon(themeMode == ThemeMode.dark ? Icons.light_mode_rounded : Icons.dark_mode_rounded),
+                  size: 36,
+                  hasBorder: false,
+                  tooltip: 'Toggle Theme',
+                  onPressed: () => ref.read(themeProvider.notifier).toggleTheme(),
+                ),
+                TarangIconButton(
+                  icon: const Icon(Icons.logout_rounded),
+                  size: 36,
+                  hasBorder: false,
+                  tooltip: 'Logout',
+                  onPressed: () async {
+                    final confirm = await TarangConfirmDialog.show(
+                      context: context,
+                      title: 'Log Out',
+                      message: 'Are you sure you want to log out of your Tarang session?',
+                      confirmText: 'Log Out',
+                    );
+                    if (confirm == true) {
+                      await ref.read(authProvider.notifier).logout();
+                    }
+                  },
+                ),
+                const SizedBox(width: 8),
+              ],
             ),
-            onPressed: () {
-              ref.read(themeProvider.notifier).toggleTheme();
-            },
           ),
-          IconButton(
-            icon: const Icon(Icons.logout),
-            onPressed: () async {
-              final confirm = await AppDialogs.showConfirmation(
-                context: context,
-                title: 'Log Out',
-                message:
-                    'Are you sure you want to log out of your Tarang session?',
-                confirmText: 'Log Out',
-              );
-              if (confirm == true) {
-                await ref.read(authProvider.notifier).logout();
-              }
-            },
-          ),
-        ],
+        ),
       ),
-      body: tabs[_currentTabIndex],
+      body: SafeArea(
+        bottom: false,
+        child: tabs[_currentTabIndex],
+      ),
       floatingActionButton: _currentTabIndex == 0
-          ? FloatingActionButton(
-              onPressed: () => context.push('/compose'),
-              backgroundColor: AppTheme.primaryTeal,
-              foregroundColor: Colors.white,
-              child: const Icon(Icons.add),
+          ? Container(
+              decoration: const BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: AppTheme.waveGradient,
+              ),
+              child: FloatingActionButton(
+                onPressed: () => context.push('/compose'),
+                backgroundColor: Colors.transparent,
+                elevation: 0,
+                child: const Icon(Icons.edit_rounded, color: Colors.white),
+              ),
             )
           : null,
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _currentTabIndex,
-        type: BottomNavigationBarType.fixed,
-        selectedItemColor: AppTheme.primaryTeal,
-        unselectedItemColor: Colors.grey,
-        onTap: (index) {
-          if (index == 2) {
-            context.push('/compose');
-          } else {
-            setState(() {
-              _currentTabIndex = index;
-            });
-          }
-        },
-        items: [
-          const BottomNavigationBarItem(
-            icon: Icon(Icons.home_outlined),
-            activeIcon: Icon(Icons.home),
-            label: 'Home',
-          ),
-          const BottomNavigationBarItem(
-            icon: Icon(Icons.search_rounded),
-            label: 'Explore',
-          ),
-          const BottomNavigationBarItem(
-            icon: Icon(Icons.add_box_outlined),
-            activeIcon: Icon(Icons.add_box),
-            label: 'Compose',
-          ),
-          BottomNavigationBarItem(
-            icon: Badge(
-              label: Text(ref.watch(unreadCountProvider).toString()),
-              isLabelVisible: ref.watch(unreadCountProvider) > 0,
-              child: const Icon(Icons.notifications_none_rounded),
+      bottomNavigationBar: Container(
+        decoration: BoxDecoration(
+          border: Border(top: BorderSide(color: borderColor)),
+        ),
+        child: BottomNavigationBar(
+          currentIndex: _currentTabIndex,
+          type: BottomNavigationBarType.fixed,
+          backgroundColor: isDark ? AppTheme.darkSurface : AppTheme.lightSurface,
+          selectedItemColor: isDark ? AppTheme.primaryTealLight : AppTheme.primaryTeal,
+          unselectedItemColor: AppTheme.textMuted,
+          showSelectedLabels: true,
+          showUnselectedLabels: true,
+          onTap: (index) {
+            if (index == 2) {
+              context.push('/compose');
+            } else {
+              setState(() {
+                _currentTabIndex = index;
+              });
+            }
+          },
+          items: [
+            const BottomNavigationBarItem(
+              icon: Icon(Icons.home_outlined),
+              activeIcon: Icon(Icons.home_rounded),
+              label: 'Ocean',
             ),
-            activeIcon: Badge(
-              label: Text(ref.watch(unreadCountProvider).toString()),
-              isLabelVisible: ref.watch(unreadCountProvider) > 0,
-              child: const Icon(Icons.notifications),
+            const BottomNavigationBarItem(
+              icon: Icon(Icons.search_rounded),
+              activeIcon: Icon(Icons.search_rounded),
+              label: 'Explore',
             ),
-            label: 'Notifications',
-          ),
-          const BottomNavigationBarItem(
-            icon: Icon(Icons.person_outline),
-            activeIcon: Icon(Icons.person),
-            label: 'Profile',
-          ),
-        ],
+            const BottomNavigationBarItem(
+              icon: Icon(Icons.add_circle_outline_rounded),
+              activeIcon: Icon(Icons.add_circle_rounded),
+              label: 'Compose',
+            ),
+            BottomNavigationBarItem(
+              icon: Badge(
+                label: Text(ref.watch(unreadCountProvider).toString()),
+                isLabelVisible: ref.watch(unreadCountProvider) > 0,
+                child: const Icon(Icons.notifications_none_rounded),
+              ),
+              activeIcon: Badge(
+                label: Text(ref.watch(unreadCountProvider).toString()),
+                isLabelVisible: ref.watch(unreadCountProvider) > 0,
+                child: const Icon(Icons.notifications_rounded),
+              ),
+              label: 'Alerts',
+            ),
+            const BottomNavigationBarItem(
+              icon: Icon(Icons.person_outline_rounded),
+              activeIcon: Icon(Icons.person_rounded),
+              label: 'You',
+            ),
+          ],
+        ),
       ),
     );
   }

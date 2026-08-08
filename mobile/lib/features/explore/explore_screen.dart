@@ -3,11 +3,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mobile/core/models/trending_hashtag_model.dart';
 import 'package:mobile/core/models/wave_model.dart';
+import 'package:mobile/core/models/user_model.dart';
 import 'package:mobile/core/shared/widgets/app_widgets.dart';
 import 'package:mobile/core/theme/app_theme.dart';
+import 'package:mobile/core/theme/app_text_styles.dart';
 import 'package:mobile/features/explore/providers/explore_providers.dart';
 import 'package:mobile/features/explore/hashtag_page.dart';
 import 'package:mobile/features/home/widgets/wave_card.dart';
+import 'package:mobile/features/profile/profile_screen.dart';
 
 class ExploreScreen extends ConsumerStatefulWidget {
   const ExploreScreen({super.key});
@@ -23,6 +26,7 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen>
   TabController? _tabController;
   Timer? _debounce;
   bool _isSearchingActive = false;
+  String _selectedCategory = 'all';
 
   @override
   void initState() {
@@ -43,6 +47,8 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen>
     super.dispose();
   }
 
+  String _lastQuery = '';
+
   void _handleTabChange() {
     if (_searchController.text.trim().isNotEmpty) {
       _triggerSearch();
@@ -55,6 +61,9 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen>
       _isSearchingActive = text.isNotEmpty;
     });
 
+    final query = text.trim();
+    if (query == _lastQuery) return; // Prevent duplicate execution on focus changes / composition events
+
     if (_debounce?.isActive ?? false) _debounce!.cancel();
     _debounce = Timer(const Duration(milliseconds: 400), () {
       _triggerSearch();
@@ -63,6 +72,7 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen>
 
   void _triggerSearch() {
     final query = _searchController.text.trim();
+    _lastQuery = query;
     if (query.isEmpty) {
       ref.read(searchProvider.notifier).search('');
       return;
@@ -73,11 +83,6 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen>
     ref.read(searchProvider.notifier).search(query, kind: selectedKind);
   }
 
-  void _handleRecentSearchTap(String query) {
-    _searchController.text = query;
-    _searchFocusNode.unfocus();
-    ref.read(searchProvider.notifier).addRecentSearch(query);
-  }
 
   void _handleSearchSubmit(String query) {
     if (query.trim().isNotEmpty) {
@@ -85,407 +90,509 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen>
     }
   }
 
-  Widget _buildSuggestedRiderRow(dynamic rider) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: AppTheme.spaceS),
-      padding: const EdgeInsets.all(AppTheme.spaceM),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
-        borderRadius: BorderRadius.circular(AppTheme.radiusM),
-        border: Border.all(color: Colors.grey.withValues(alpha: 0.1)),
-      ),
-      child: Row(
-        children: [
-          CustomAvatar(url: rider.avatarUrl, radius: 20),
-          const SizedBox(width: AppTheme.spaceM),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  rider.fullName ?? rider.username,
-                  style: const TextStyle(
-                      fontWeight: FontWeight.bold, fontSize: 14),
-                ),
-                Text(
-                  '@${rider.username}',
-                  style: const TextStyle(color: Colors.grey, fontSize: 12),
-                ),
-                if (rider.bio != null && rider.bio!.isNotEmpty) ...[
-                  const SizedBox(height: 4),
-                  Text(
-                    rider.bio!,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontSize: 12),
-                  ),
-                ],
-              ],
-            ),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              ref.read(exploreProvider.notifier).toggleRideSuggested(rider.id);
-            },
-            style: ElevatedButton.styleFrom(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              minimumSize: const Size(60, 32),
-            ),
-            child: const Text('Ride', style: TextStyle(fontSize: 12)),
-          ),
-        ],
-      ),
-    );
-  }
+  Widget _buildSuggestedRiderRow(UserModel rider) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final textThemeColor = isDark ? AppTheme.textPrimaryDark : AppTheme.textPrimaryLight;
 
-  Widget _buildTrendingHashtagTile(TrendingHashtagModel tag) {
-    return ListTile(
-      leading: Container(
-        width: 36,
-        height: 36,
-        decoration: BoxDecoration(
-          color: AppTheme.primaryTeal.withValues(alpha: 0.1),
-          shape: BoxShape.circle,
-        ),
-        child: const Center(
-          child: Icon(Icons.trending_up, color: AppTheme.primaryTeal, size: 18),
-        ),
-      ),
-      title: Text(
-        '#${tag.tag}',
-        style: const TextStyle(fontWeight: FontWeight.bold),
-      ),
-      subtitle: Text('${tag.count} waves'),
-      trailing: const Icon(Icons.chevron_right, color: Colors.grey),
-      onTap: () {
-        Navigator.of(context).push(
-          MaterialPageRoute(
-            builder: (context) => HashtagPage(tag: '#${tag.tag}'),
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _buildTrendingWavesList(List<WaveModel> waves) {
-    if (waves.isEmpty) return const SizedBox.shrink();
-    return Column(
-      children: waves.map((w) => WaveCard(wave: w)).toList(),
-    );
-  }
-
-  Widget _buildExploreHub() {
-    final state = ref.watch(exploreProvider);
-
-    if (state.isLoading) {
-      return const Center(child: CircularProgressIndicator());
-    }
-
-    if (state.errorMessage != null) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8.0),
+      child: TarangCard(
+        child: Row(
           children: [
-            const Icon(Icons.cloud_off, size: 64, color: Colors.grey),
-            const SizedBox(height: AppTheme.spaceM),
-            Text(state.errorMessage!),
-            const SizedBox(height: AppTheme.spaceM),
-            ElevatedButton(
-              onPressed: () =>
-                  ref.read(exploreProvider.notifier).loadExploreData(),
-              child: const Text('Retry'),
+            GestureDetector(
+              onTap: () => Navigator.of(context).push(
+                MaterialPageRoute(builder: (context) => ProfileScreen(username: rider.username)),
+              ),
+              child: TarangAvatar(
+                username: rider.username,
+                avatarUrl: rider.avatarUrl,
+                size: TarangAvatarSize.md,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: GestureDetector(
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute(builder: (context) => ProfileScreen(username: rider.username)),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      rider.fullName ?? rider.username,
+                      style: AppTextStyles.captionBold.copyWith(color: textThemeColor),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    Text(
+                      '@${rider.username}',
+                      style: AppTextStyles.metadata.copyWith(color: AppTheme.textMuted),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            SizedBox(
+              height: 32,
+              child: TarangButton(
+                text: 'Ride',
+                variant: TarangButtonVariant.primary,
+                size: TarangButtonSize.sm,
+                onPressed: () => ref.read(exploreProvider.notifier).toggleRideSuggested(rider.id),
+              ),
             ),
           ],
         ),
-      );
-    }
+      ),
+    );
+  }
 
-    return RefreshIndicator(
-      onRefresh: () => ref.read(exploreProvider.notifier).loadExploreData(),
-      child: SingleChildScrollView(
-        physics: const AlwaysScrollableScrollPhysics(),
+  Widget _buildTrendingHashtagCard(TrendingHashtagModel ht, int rank) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final textThemeColor = isDark ? AppTheme.textPrimaryDark : AppTheme.textPrimaryLight;
+    final isHot = ht.category == 'trending_now';
+    final isRising = ht.category == 'rising';
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8.0),
+      child: GestureDetector(
+        onTap: () {
+          Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (context) => HashtagPage(tag: ht.tag),
+            ),
+          );
+        },
+        child: TarangCard(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    '#$rank',
+                    style: AppTextStyles.h5.copyWith(
+                      color: isDark ? Colors.white24 : Colors.black12,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                  Row(
+                    children: [
+                      if (isHot)
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: Colors.red.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: const Text(
+                            '🔥 HOT',
+                            style: TextStyle(color: Colors.red, fontSize: 8, fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                      if (isRising)
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF10B981).withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: const Text(
+                            '📈 RISING',
+                            style: TextStyle(color: Color(0xFF10B981), fontSize: 8, fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                    ],
+                  ),
+                ],
+              ),
+              const SizedBox(height: 6),
+              Text(
+                '#${ht.tag}',
+                style: AppTextStyles.captionBold.copyWith(color: textThemeColor),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                '${ht.count} waves',
+                style: AppTextStyles.metadata.copyWith(color: AppTheme.textMuted),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTrendingWaveCard(WaveModel wave, int rank) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final textThemeColor = isDark ? AppTheme.textPrimaryDark : AppTheme.textPrimaryLight;
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8.0),
+      child: TarangCard(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Suggested Riders Section
-            if (state.suggestedRiders.isNotEmpty) ...[
-              Padding(
-                padding: const EdgeInsets.all(AppTheme.spaceM),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      '👥 Suggested Riders',
-                      style:
-                          TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-                    ),
-                    const SizedBox(height: AppTheme.spaceM),
-                    ...state.suggestedRiders.map(_buildSuggestedRiderRow),
-                  ],
+            Row(
+              children: [
+                TarangAvatar(
+                  username: wave.creator.username,
+                  avatarUrl: wave.creator.avatarUrl,
+                  size: TarangAvatarSize.sm,
                 ),
-              ),
-              const Divider(height: 1),
-            ],
-
-            // Trending Hashtags Section
-            if (state.trendingHashtags.isNotEmpty) ...[
-              Padding(
-                padding: const EdgeInsets.all(AppTheme.spaceM),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      '🏷 Trending Hashtags',
-                      style:
-                          TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-                    ),
-                    const SizedBox(height: AppTheme.spaceS),
-                    ...state.trendingHashtags.map(_buildTrendingHashtagTile),
-                  ],
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        wave.creator.fullName ?? wave.creator.username,
+                        style: AppTextStyles.captionBold.copyWith(color: textThemeColor),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      Text(
+                        '@${wave.creator.username}',
+                        style: AppTextStyles.metadata.copyWith(color: AppTheme.textMuted),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-              const Divider(height: 1),
-            ],
-
-            // Trending Waves Section
-            if (state.trendingWaves.isNotEmpty) ...[
-              const Padding(
-                padding: EdgeInsets.all(AppTheme.spaceM),
-                child: Text(
-                  '🔥 Trending Waves',
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: isDark ? Colors.white12 : Colors.black12,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    '#$rank',
+                    style: AppTextStyles.metadata.copyWith(fontWeight: FontWeight.bold, color: textThemeColor),
+                  ),
                 ),
+              ],
+            ),
+            if (wave.content != null && wave.content!.isNotEmpty) ...[
+              const SizedBox(height: 8),
+              Text(
+                wave.content!,
+                style: AppTextStyles.caption.copyWith(color: textThemeColor),
+                maxLines: 3,
+                overflow: TextOverflow.ellipsis,
               ),
-              _buildTrendingWavesList(state.trendingWaves),
             ],
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Text('🤍 ${wave.ripplesCount}', style: AppTextStyles.metadata.copyWith(color: AppTheme.textMuted)),
+                const SizedBox(width: 12),
+                Text('🔁 ${wave.spreadsCount}', style: AppTextStyles.metadata.copyWith(color: AppTheme.textMuted)),
+                const SizedBox(width: 12),
+                Text('💬 ${wave.joinsCount}', style: AppTextStyles.metadata.copyWith(color: AppTheme.textMuted)),
+              ],
+            ),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildRecentSearches(List<String> recents) {
-    if (recents.isEmpty) return const SizedBox.shrink();
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+  Widget _buildCategoryChip(String id, String label, String icon) {
+    final isSelected = _selectedCategory == id;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return Padding(
+      padding: const EdgeInsets.only(right: 8.0),
+      child: ChoiceChip(
+        label: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(icon, style: const TextStyle(fontSize: 12)),
+            const SizedBox(width: 6),
+            Text(label),
+          ],
+        ),
+        selected: isSelected,
+        onSelected: (val) {
+          if (val) {
+            setState(() {
+              _selectedCategory = id;
+            });
+          }
+        },
+        selectedColor: isDark ? AppTheme.primaryTealLight.withValues(alpha: 0.2) : AppTheme.primaryTeal.withValues(alpha: 0.1),
+        backgroundColor: Colors.transparent,
+        labelStyle: AppTextStyles.metadata.copyWith(
+          fontWeight: FontWeight.bold,
+          color: isSelected
+              ? (isDark ? AppTheme.primaryTealLight : AppTheme.primaryTeal)
+              : (isDark ? AppTheme.textSecondaryDark : AppTheme.textSecondaryLight),
+        ),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+          side: BorderSide(
+            color: isSelected
+                ? (isDark ? AppTheme.primaryTealLight : AppTheme.primaryTeal)
+                : (isDark ? AppTheme.darkCardBorder : AppTheme.lightCardBorder),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTrendingDashboard(ExploreState exploreState) {
+    if (exploreState.isLoading) {
+      return const Center(child: TarangLoading());
+    }
+
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final titleColor = isDark ? AppTheme.textPrimaryDark : AppTheme.textPrimaryLight;
+
+    // Filter hashtags based on selected category
+    List<TrendingHashtagModel> tags = exploreState.trendingHashtags;
+    if (_selectedCategory != 'all') {
+      tags = tags.where((h) => h.category == _selectedCategory).toList();
+    }
+
+    return ListView(
+      physics: const BouncingScrollPhysics(),
+      padding: const EdgeInsets.all(16),
       children: [
-        Padding(
-          padding: const EdgeInsets.symmetric(
-              horizontal: AppTheme.spaceM, vertical: AppTheme.spaceS),
+        // Category filters
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
           child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text('Recent Searches',
-                  style: TextStyle(
-                      fontWeight: FontWeight.bold, color: Colors.grey)),
-              TextButton(
-                onPressed: () =>
-                    ref.read(searchProvider.notifier).clearRecentSearches(),
-                child: const Text('Clear All'),
-              ),
+              _buildCategoryChip('all', 'All', '🌊'),
+              _buildCategoryChip('trending_now', 'Trending Now', '🔥'),
+              _buildCategoryChip('rising', 'Rising', '📈'),
+              _buildCategoryChip('popular_this_week', 'This Week', '⭐'),
             ],
           ),
         ),
-        ...recents.map((query) => ListTile(
-              leading: const Icon(Icons.history, color: Colors.grey),
-              title: Text(query),
-              onTap: () => _handleRecentSearchTap(query),
-            )),
-        const Divider(),
+        const SizedBox(height: 20),
+
+        // Suggested riders to ride
+        if (exploreState.suggestedRiders.isNotEmpty) ...[
+          Text('Suggested Riders', style: AppTextStyles.captionBold.copyWith(color: titleColor)),
+          const SizedBox(height: 8),
+          ...exploreState.suggestedRiders.map(_buildSuggestedRiderRow),
+          const SizedBox(height: 20),
+        ],
+
+        // Trending hashtags
+        if (tags.isNotEmpty) ...[
+          Text('Trending Hashtags', style: AppTextStyles.captionBold.copyWith(color: titleColor)),
+          const SizedBox(height: 8),
+          ...tags.asMap().entries.map((entry) => _buildTrendingHashtagCard(entry.value, entry.key + 1)),
+          const SizedBox(height: 20),
+        ],
+
+        // Trending waves
+        if (exploreState.trendingWaves.isNotEmpty) ...[
+          Text('Trending Waves', style: AppTextStyles.captionBold.copyWith(color: titleColor)),
+          const SizedBox(height: 8),
+          ...exploreState.trendingWaves.asMap().entries.map((entry) => _buildTrendingWaveCard(entry.value, entry.key + 1)),
+        ],
       ],
     );
   }
 
-  Widget _buildSearchResultsList() {
-    final searchState = ref.watch(searchProvider);
-
+  Widget _buildSearchResults(SearchState searchState) {
     if (searchState.isLoading) {
-      return const Center(child: CircularProgressIndicator());
+      return const Center(child: TarangLoading());
     }
 
     if (searchState.errorMessage != null) {
-      return Center(
-        child: Text(searchState.errorMessage!),
+      return TarangErrorState(
+        message: searchState.errorMessage!,
+        onRetry: _triggerSearch,
       );
     }
 
-    if (searchState.people.isEmpty && searchState.waves.isEmpty) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(AppTheme.spaceXL),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Text('🌊', style: TextStyle(fontSize: 48)),
-              const SizedBox(height: AppTheme.spaceM),
-              Text(
-                'Nothing found for "${searchState.query}"',
-                style: const TextStyle(fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: AppTheme.spaceS),
-              const Text(
-                'Try searching for different keywords or explore suggested riders.',
-                textAlign: TextAlign.center,
-                style: TextStyle(color: Colors.grey),
-              ),
-            ],
-          ),
-        ),
-      );
-    }
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final textThemeColor = isDark ? AppTheme.textPrimaryDark : AppTheme.textPrimaryLight;
 
     return TabBarView(
       controller: _tabController,
       children: [
-        // All
+        // Tab 1: All Results
         ListView(
+          padding: const EdgeInsets.all(16),
           children: [
             if (searchState.people.isNotEmpty) ...[
-              const Padding(
-                padding: EdgeInsets.all(AppTheme.spaceM),
-                child: Text('People',
-                    style: TextStyle(
-                        fontWeight: FontWeight.bold, color: Colors.grey)),
-              ),
-              ...searchState.people.map((u) => ListTile(
-                    leading: CustomAvatar(url: u.avatarUrl),
-                    title: Text(u.fullName ?? u.username),
-                    subtitle: Text('@${u.username}'),
-                    trailing: ElevatedButton(
-                      onPressed: () => ref
-                          .read(searchProvider.notifier)
-                          .toggleRideSearchResult(u.id),
-                      child: const Text('Ride'),
-                    ),
-                  )),
+              Text('Riders', style: AppTextStyles.captionBold.copyWith(color: textThemeColor)),
+              const SizedBox(height: 8),
+              ...searchState.people.take(3).map(_buildSearchResultRiderRow),
+              const SizedBox(height: 16),
             ],
             if (searchState.waves.isNotEmpty) ...[
-              const Padding(
-                padding: EdgeInsets.all(AppTheme.spaceM),
-                child: Text('Waves',
-                    style: TextStyle(
-                        fontWeight: FontWeight.bold, color: Colors.grey)),
-              ),
-              ...searchState.waves.map((w) => WaveCard(wave: w)),
+              Text('Waves', style: AppTextStyles.captionBold.copyWith(color: textThemeColor)),
+              const SizedBox(height: 8),
+              ...searchState.waves.map((w) => Padding(
+                    padding: const EdgeInsets.only(bottom: 8.0),
+                    child: WaveCard(wave: w),
+                  )),
             ],
-          ],
-        ),
-
-        // People
-        ListView.builder(
-          itemCount: searchState.people.length,
-          itemBuilder: (context, index) {
-            final u = searchState.people[index];
-            return ListTile(
-              leading: CustomAvatar(url: u.avatarUrl),
-              title: Text(u.fullName ?? u.username),
-              subtitle: Text('@${u.username}'),
-              trailing: ElevatedButton(
-                onPressed: () => ref
-                    .read(searchProvider.notifier)
-                    .toggleRideSearchResult(u.id),
-                child: const Text('Ride'),
+            if (searchState.people.isEmpty && searchState.waves.isEmpty)
+              const SizedBox(
+                height: 300,
+                child: TarangEmptyState(
+                  title: 'No results found',
+                  body: 'Try searching for different terms or keywords.',
+                ),
               ),
-            );
-          },
+          ],
         ),
 
-        // Waves
-        ListView.builder(
-          itemCount: searchState.waves.length,
-          itemBuilder: (context, index) =>
-              WaveCard(wave: searchState.waves[index]),
-        ),
+        // Tab 2: Riders (people)
+        searchState.people.isEmpty
+            ? const TarangEmptyState(title: 'No riders found', body: 'No riders match your query.')
+            : ListView.builder(
+                padding: const EdgeInsets.all(16),
+                itemCount: searchState.people.length,
+                itemBuilder: (context, index) => _buildSearchResultRiderRow(searchState.people[index]),
+              ),
 
-        // Hashtags Placeholder view (since search has no custom hashtags array, display suggestions)
-        ListView(
-          padding: const EdgeInsets.all(AppTheme.spaceM),
+        // Tab 3: Waves
+        searchState.waves.isEmpty
+            ? const TarangEmptyState(title: 'No waves found', body: 'No waves match your query.')
+            : ListView.builder(
+                padding: const EdgeInsets.all(16),
+                itemCount: searchState.waves.length,
+                itemBuilder: (context, index) => Padding(
+                  padding: const EdgeInsets.only(bottom: 8.0),
+                  child: WaveCard(wave: searchState.waves[index]),
+                ),
+              ),
+
+        // Tab 4: Circles (empty placeholder)
+        const TarangEmptyState(title: 'No Circles found', body: 'Circle search is coming soon.'),
+      ],
+    );
+  }
+
+  Widget _buildSearchResultRiderRow(UserModel user) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final textThemeColor = isDark ? AppTheme.textPrimaryDark : AppTheme.textPrimaryLight;
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8.0),
+      child: TarangCard(
+        child: Row(
           children: [
-            const Icon(Icons.tag, size: 64, color: Colors.grey),
-            const SizedBox(height: AppTheme.spaceM),
-            const Text(
-              'Hashtags Feed',
-              textAlign: TextAlign.center,
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+            GestureDetector(
+              onTap: () => Navigator.of(context).push(
+                MaterialPageRoute(builder: (context) => ProfileScreen(username: user.username)),
+              ),
+              child: TarangAvatar(
+                username: user.username,
+                avatarUrl: user.avatarUrl,
+                size: TarangAvatarSize.md,
+              ),
             ),
-            const SizedBox(height: AppTheme.spaceS),
-            Text(
-              'Explore trending tags on the explore hub page.',
-              textAlign: TextAlign.center,
-              style: TextStyle(color: Colors.grey.shade600),
+            const SizedBox(width: 12),
+            Expanded(
+              child: GestureDetector(
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute(builder: (context) => ProfileScreen(username: user.username)),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      user.fullName ?? user.username,
+                      style: AppTextStyles.captionBold.copyWith(color: textThemeColor),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    Text(
+                      '@${user.username}',
+                      style: AppTextStyles.metadata.copyWith(color: AppTheme.textMuted),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            SizedBox(
+              height: 32,
+              child: TarangButton(
+                text: 'Ride',
+                variant: TarangButtonVariant.primary,
+                size: TarangButtonSize.sm,
+                onPressed: () => ref.read(searchProvider.notifier).toggleRideSearchResult(user.id),
+              ),
             ),
           ],
         ),
-      ],
+      ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
+    final exploreState = ref.watch(exploreProvider);
     final searchState = ref.watch(searchProvider);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final borderColor = isDark ? AppTheme.darkCardBorder : AppTheme.lightCardBorder;
 
     return Scaffold(
-      appBar: AppBar(
-        titleSpacing: 0,
-        title: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: AppTheme.spaceM),
-          child: Container(
-            height: 44,
-            decoration: BoxDecoration(
-              color: Colors.grey.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(22),
-            ),
-            child: TextField(
+      body: Column(
+        children: [
+          // Search Input Bar
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: TarangTextField(
               controller: _searchController,
               focusNode: _searchFocusNode,
+              hint: 'Search Waves, Riders, Hashtags...',
+              leftIcon: const Icon(Icons.search_rounded, color: AppTheme.textMuted),
+              rightIcon: _isSearchingActive
+                  ? GestureDetector(
+                      onTap: () {
+                        _searchController.clear();
+                        _searchFocusNode.unfocus();
+                      },
+                      child: const Icon(Icons.clear_rounded, color: AppTheme.textMuted),
+                    )
+                  : null,
               onSubmitted: _handleSearchSubmit,
-              decoration: InputDecoration(
-                prefixIcon: const Icon(Icons.search, color: Colors.grey),
-                hintText: 'Search people, waves, hashtags...',
-                border: InputBorder.none,
-                enabledBorder: InputBorder.none,
-                focusedBorder: InputBorder.none,
-                contentPadding: const EdgeInsets.symmetric(vertical: 10),
-                suffixIcon: _isSearchingActive
-                    ? IconButton(
-                        icon: const Icon(Icons.clear, color: Colors.grey),
-                        onPressed: () {
-                          _searchController.clear();
-                          _searchFocusNode.unfocus();
-                          ref.read(searchProvider.notifier).search('');
-                        },
-                      )
-                    : null,
-              ),
             ),
           ),
-        ),
-        bottom: _isSearchingActive
-            ? TabBar(
+
+          // Search Kind Tabs (visible only when search text is active)
+          if (_isSearchingActive)
+            Container(
+              decoration: BoxDecoration(
+                border: Border(bottom: BorderSide(color: borderColor)),
+              ),
+              child: TabBar(
                 controller: _tabController,
-                indicatorColor: AppTheme.primaryTeal,
-                labelColor: AppTheme.primaryTeal,
+                labelStyle: AppTextStyles.label.copyWith(fontWeight: FontWeight.bold),
+                unselectedLabelStyle: AppTextStyles.label,
+                labelColor: isDark ? AppTheme.primaryTealLight : AppTheme.primaryTeal,
+                unselectedLabelColor: AppTheme.textMuted,
+                indicatorColor: isDark ? AppTheme.primaryTealLight : AppTheme.primaryTeal,
                 tabs: const [
                   Tab(text: 'All'),
-                  Tab(text: 'People'),
+                  Tab(text: 'Riders'),
                   Tab(text: 'Waves'),
-                  Tab(text: 'Hashtags'),
+                  Tab(text: 'Circles'),
                 ],
-              )
-            : null,
-      ),
-      body: SafeArea(
-        child: _isSearchingActive
-            ? Column(
-                children: [
-                  if (_searchController.text.trim().isNotEmpty &&
-                      searchState.waves.isEmpty &&
-                      searchState.people.isEmpty)
-                    _buildRecentSearches(searchState.recentSearches),
-                  Expanded(child: _buildSearchResultsList()),
-                ],
-              )
-            : _buildExploreHub(),
+              ),
+            ),
+
+          // Body list
+          Expanded(
+            child: _isSearchingActive ? _buildSearchResults(searchState) : _buildTrendingDashboard(exploreState),
+          ),
+        ],
       ),
     );
   }

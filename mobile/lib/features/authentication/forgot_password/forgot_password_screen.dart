@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:mobile/core/shared/widgets/app_widgets.dart';
+import 'package:mobile/core/shared/widgets/auth_shell.dart';
 import 'package:mobile/core/theme/app_theme.dart';
+import 'package:mobile/core/theme/app_text_styles.dart';
 import 'package:mobile/core/utils/validators.dart';
 import 'package:mobile/core/providers/core_providers.dart';
 
@@ -19,6 +21,7 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
   final _emailController = TextEditingController();
   bool _isLoading = false;
   bool _success = false;
+  String? _inlineError;
 
   @override
   void dispose() {
@@ -27,6 +30,10 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
   }
 
   Future<void> _handleForgotPassword() async {
+    setState(() {
+      _inlineError = null;
+    });
+
     if (_formKey.currentState!.validate()) {
       setState(() {
         _isLoading = true;
@@ -43,104 +50,177 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
           });
         }
       } catch (e) {
-        if (mounted) {
-          AppDialogs.showError(
-            context: context,
-            title: 'Request Failed',
-            message: e.toString(),
-          );
-        }
+        setState(() {
+          _inlineError = e.toString();
+        });
       } finally {
-        if (mounted) {
-          setState(() {
-            _isLoading = false;
-          });
-        }
+        setState(() {
+          _isLoading = false;
+        });
       }
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Forgot Password'),
-      ),
-      body: Padding(
-        padding: const EdgeInsets.all(AppTheme.spaceM),
-        child: _success
-            ? Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  const Icon(
-                    Icons.mark_email_read_outlined,
-                    size: 80,
-                    color: Colors.green,
-                  ),
-                  const SizedBox(height: AppTheme.spaceM),
-                  Text(
-                    'Instructions Sent',
-                    textAlign: TextAlign.center,
-                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return AuthShell(
+      child: _success
+          ? Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Center(
+                  child: Column(
+                    children: [
+                      const TarangLogo(size: 60.0, showText: false),
+                      const SizedBox(height: 24),
+                      Container(
+                        width: 48,
+                        height: 48,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: (isDark ? AppTheme.successDark : AppTheme.successLight)
+                              .withValues(alpha: 0.1),
+                        ),
+                        child: Icon(
+                          Icons.mark_email_read_outlined,
+                          color: isDark ? AppTheme.successDark : AppTheme.successLight,
+                          size: 24,
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        'Instructions Sent',
+                        style: AppTextStyles.h5.copyWith(
+                          color: isDark ? AppTheme.textPrimaryDark : AppTheme.textPrimaryLight,
                           fontWeight: FontWeight.bold,
                         ),
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'We have dispatched a reset link. Please check your inbox (or simulated logs).',
+                        style: AppTextStyles.caption.copyWith(
+                          color: isDark ? AppTheme.textSecondaryDark : AppTheme.textSecondaryLight,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: AppTheme.spaceM),
-                  const Text(
-                    'If the email address exists in our system, password reset instructions will be sent shortly. Please check your inbox.',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(fontSize: 16),
-                  ),
-                  const SizedBox(height: AppTheme.spaceL),
-                  PrimaryButton(
-                    text: 'Back to Login',
-                    onPressed: () => context.go('/login'),
-                  ),
-                ],
-              )
-            : Form(
-                key: _formKey,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    const Icon(
-                      Icons.lock_reset,
-                      size: 80,
-                      color: AppTheme.primaryTeal,
+                ),
+                const SizedBox(height: 32),
+                TarangButton(
+                  text: 'Back to Login',
+                  variant: TarangButtonVariant.primary,
+                  size: TarangButtonSize.lg,
+                  onPressed: () => context.go('/login'),
+                ),
+              ],
+            )
+          : Form(
+              key: _formKey,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  // Header
+                  Center(
+                    child: Column(
+                      children: [
+                        const TarangLogo(size: 60.0, showText: false),
+                        const SizedBox(height: 12),
+                        Text(
+                          'Restore Account Flow',
+                          style: AppTextStyles.h5.copyWith(
+                            color: isDark ? AppTheme.textPrimaryDark : AppTheme.textPrimaryLight,
+                            fontWeight: FontWeight.bold,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'Enter your email to receive a password reset token link',
+                          style: AppTextStyles.caption.copyWith(
+                            color: isDark ? AppTheme.textSecondaryDark : AppTheme.textSecondaryLight,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                      ],
                     ),
-                    const SizedBox(height: AppTheme.spaceM),
-                    const Text(
-                      'Reset your password',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
+                  ),
+                  const SizedBox(height: 24),
+
+                  // Inline Error Banner
+                  if (_inlineError != null) ...[
+                    Container(
+                      decoration: BoxDecoration(
+                        color: (isDark ? AppTheme.dangerDark : AppTheme.dangerLight)
+                            .withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(
+                          color: (isDark ? AppTheme.dangerDark : AppTheme.dangerLight)
+                              .withValues(alpha: 0.2),
+                        ),
+                      ),
+                      padding: const EdgeInsets.all(12),
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.warning_amber_rounded,
+                            color: isDark ? AppTheme.dangerDark : AppTheme.dangerLight,
+                            size: 20,
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              _inlineError!,
+                              style: AppTextStyles.metadata.copyWith(
+                                color: isDark ? AppTheme.dangerDark : AppTheme.dangerLight,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
-                    const SizedBox(height: AppTheme.spaceM),
-                    const Text(
-                      'Enter your email address below and we will send you instructions to reset your password.',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(fontSize: 15),
-                    ),
-                    const SizedBox(height: AppTheme.spaceL),
-                    CustomTextField(
-                      labelText: 'Email Address',
-                      controller: _emailController,
-                      keyboardType: TextInputType.emailAddress,
-                      validator: Validators.validateEmail,
-                    ),
-                    const SizedBox(height: AppTheme.spaceL),
-                    PrimaryButton(
-                      text: 'Send Password Reset Link',
-                      onPressed: _handleForgotPassword,
-                      isLoading: _isLoading,
-                    ),
+                    const SizedBox(height: 16),
                   ],
-                ),
+
+                  // Email
+                  TarangTextField(
+                    label: 'Registered Email',
+                    hint: 'e.g. ajay@tarang.in',
+                    controller: _emailController,
+                    keyboardType: TextInputType.emailAddress,
+                    validator: Validators.validateEmail,
+                  ),
+                  const SizedBox(height: 24),
+
+                  // Submit Button
+                  TarangButton(
+                    text: _isLoading ? 'Sending link...' : 'Send Reset Link',
+                    variant: TarangButtonVariant.primary,
+                    size: TarangButtonSize.lg,
+                    loading: _isLoading,
+                    onPressed: _handleForgotPassword,
+                  ),
+                  const SizedBox(height: 24),
+
+                  // Cancel Link
+                  GestureDetector(
+                    onTap: () => context.go('/login'),
+                    child: Text(
+                      'Cancel and return to Login',
+                      style: AppTextStyles.metadata.copyWith(
+                        color: isDark ? AppTheme.textSecondaryDark : AppTheme.textSecondaryLight,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                ],
               ),
-      ),
+            ),
     );
   }
 }

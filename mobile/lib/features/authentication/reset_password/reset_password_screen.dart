@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:mobile/core/shared/widgets/app_widgets.dart';
+import 'package:mobile/core/shared/widgets/auth_shell.dart';
 import 'package:mobile/core/theme/app_theme.dart';
+import 'package:mobile/core/theme/app_text_styles.dart';
 import 'package:mobile/core/utils/validators.dart';
 import 'package:mobile/core/providers/core_providers.dart';
 
@@ -21,6 +23,9 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
   bool _isLoading = false;
+  bool _showPassword = false;
+  bool _showConfirmPassword = false;
+  String? _inlineError;
 
   @override
   void dispose() {
@@ -30,13 +35,14 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
   }
 
   Future<void> _handleResetPassword() async {
+    setState(() {
+      _inlineError = null;
+    });
+
     if (widget.token.isEmpty) {
-      AppDialogs.showError(
-        context: context,
-        title: 'Error',
-        message:
-            'No reset token found. Please request a new password reset email.',
-      );
+      setState(() {
+        _inlineError = 'No reset token found. Please request a new password reset email.';
+      });
       return;
     }
 
@@ -60,79 +66,158 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
           );
         }
       } catch (e) {
-        if (mounted) {
-          AppDialogs.showError(
-            context: context,
-            title: 'Reset Failed',
-            message: e.toString(),
-          );
-        }
+        setState(() {
+          _inlineError = e.toString();
+        });
       } finally {
-        if (mounted) {
-          setState(() {
-            _isLoading = false;
-          });
-        }
+        setState(() {
+          _isLoading = false;
+        });
       }
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Reset Password'),
-      ),
-      body: Padding(
-        padding: const EdgeInsets.all(AppTheme.spaceM),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              const Icon(
-                Icons.lock_open,
-                size: 80,
-                color: AppTheme.primaryTeal,
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return AuthShell(
+      child: Form(
+        key: _formKey,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // Header
+            Center(
+              child: Column(
+                children: [
+                  const TarangLogo(size: 60.0, showText: false),
+                  const SizedBox(height: 12),
+                  Text(
+                    'Enter New Password',
+                    style: AppTextStyles.h5.copyWith(
+                      color: isDark ? AppTheme.textPrimaryDark : AppTheme.textPrimaryLight,
+                      fontWeight: FontWeight.bold,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Please enter your new password below.',
+                    style: AppTextStyles.caption.copyWith(
+                      color: isDark ? AppTheme.textSecondaryDark : AppTheme.textSecondaryLight,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ],
               ),
-              const SizedBox(height: AppTheme.spaceM),
-              const Text(
-                'Enter New Password',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
+            ),
+            const SizedBox(height: 24),
+
+            // Inline Error Banner
+            if (_inlineError != null) ...[
+              Container(
+                decoration: BoxDecoration(
+                  color: (isDark ? AppTheme.dangerDark : AppTheme.dangerLight)
+                      .withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                    color: (isDark ? AppTheme.dangerDark : AppTheme.dangerLight)
+                        .withValues(alpha: 0.2),
+                  ),
+                ),
+                padding: const EdgeInsets.all(12),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.warning_amber_rounded,
+                      color: isDark ? AppTheme.dangerDark : AppTheme.dangerLight,
+                      size: 20,
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        _inlineError!,
+                        style: AppTextStyles.metadata.copyWith(
+                          color: isDark ? AppTheme.dangerDark : AppTheme.dangerLight,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
-              const SizedBox(height: AppTheme.spaceM),
-              const Text(
-                'Please enter your new password below.',
-                textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 15),
-              ),
-              const SizedBox(height: AppTheme.spaceL),
-              PasswordField(
-                labelText: 'New Password',
-                controller: _passwordController,
-                validator: Validators.validatePassword,
-              ),
-              const SizedBox(height: AppTheme.spaceM),
-              PasswordField(
-                labelText: 'Confirm Password',
-                controller: _confirmPasswordController,
-                validator: (value) => Validators.validateConfirmPassword(
-                  value,
-                  _passwordController.text,
-                ),
-              ),
-              const SizedBox(height: AppTheme.spaceL),
-              PrimaryButton(
-                text: 'Update Password',
-                onPressed: _handleResetPassword,
-                isLoading: _isLoading,
-              ),
+              const SizedBox(height: 16),
             ],
-          ),
+
+            // New Password
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'NEW PASSWORD',
+                  style: AppTextStyles.label.copyWith(
+                    color: isDark ? AppTheme.textSecondaryDark : AppTheme.textSecondaryLight,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                TarangTextField(
+                  hint: 'Min 8 characters',
+                  controller: _passwordController,
+                  obscureText: !_showPassword,
+                  validator: Validators.validatePassword,
+                  rightIcon: GestureDetector(
+                    onTap: () => setState(() => _showPassword = !_showPassword),
+                    child: Icon(
+                      _showPassword ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                      color: AppTheme.textMuted,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+
+            // Confirm Password
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'CONFIRM PASSWORD',
+                  style: AppTextStyles.label.copyWith(
+                    color: isDark ? AppTheme.textSecondaryDark : AppTheme.textSecondaryLight,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                TarangTextField(
+                  hint: 'Re-enter your password',
+                  controller: _confirmPasswordController,
+                  obscureText: !_showConfirmPassword,
+                  validator: (value) => Validators.validateConfirmPassword(
+                    value,
+                    _passwordController.text,
+                  ),
+                  rightIcon: GestureDetector(
+                    onTap: () => setState(() => _showConfirmPassword = !_showConfirmPassword),
+                    child: Icon(
+                      _showConfirmPassword ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                      color: AppTheme.textMuted,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 24),
+
+            // Submit Button
+            TarangButton(
+              text: _isLoading ? 'Updating...' : 'Update Password',
+              variant: TarangButtonVariant.primary,
+              size: TarangButtonSize.lg,
+              loading: _isLoading,
+              onPressed: _handleResetPassword,
+            ),
+          ],
         ),
       ),
     );

@@ -13,6 +13,8 @@ import 'package:mobile/features/splash/splash_screen.dart';
 import 'package:mobile/features/home/composer/compose_screen.dart';
 import 'package:mobile/core/models/wave_model.dart';
 
+import 'package:mobile/features/messages/conversation_list_screen.dart';
+
 final appRouterHelperProvider = Provider<AppRouterHelper>((ref) {
   return AppRouterHelper(ref);
 });
@@ -149,6 +151,10 @@ final routerProvider = Provider<GoRouter>((ref) {
             spreadFromWave: spreadFromWave,
           );
         },
+      ),
+      GoRoute(
+        path: '/messages',
+        builder: (context, state) => const ConversationListScreen(),
       ),
     ],
     errorBuilder: (context, state) => Scaffold(

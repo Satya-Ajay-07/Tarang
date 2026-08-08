@@ -84,8 +84,12 @@ class AuthNotifier extends StateNotifier<AuthState> {
   Future<void> checkAuthentication() async {
     state = const AuthState.checking();
     try {
-      final accessToken = await _secureStorage.getAccessToken();
-      final refreshToken = await _secureStorage.getRefreshToken();
+      final tokens = await Future.wait([
+        _secureStorage.getAccessToken(),
+        _secureStorage.getRefreshToken(),
+      ]);
+      final accessToken = tokens[0];
+      final refreshToken = tokens[1];
 
       if (accessToken != null && refreshToken != null) {
         // Fetch current active user profile
@@ -185,6 +189,12 @@ class AuthNotifier extends StateNotifier<AuthState> {
 
   void setUnverifiedEmail(String email) {
     state = AuthState.unverified(email);
+  }
+
+  void updateUser(UserModel updatedUser) {
+    if (state.status == AuthStatus.authenticated) {
+      state = AuthState.authenticated(updatedUser);
+    }
   }
 
   void clearError() {
